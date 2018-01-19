@@ -5,7 +5,7 @@ import 'zeppelin-solidity/contracts/token/BurnableToken.sol';
 import 'zeppelin-solidity/contracts/ownership/NoOwner.sol';
 import './AddressList.sol';
 
-contract TrueUSD is MintableToken, BurnableToken, NoOwner {
+contract TrueUSD is StandardToken, BurnableToken, NoOwner {
     string public constant name = "TrueUSD";
     string public constant symbol = "TUSD";
     uint8 public constant decimals = 18;
@@ -13,12 +13,15 @@ contract TrueUSD is MintableToken, BurnableToken, NoOwner {
     AddressList public canReceiveMintWhitelist;
     AddressList public canBurnWhiteList;
     AddressList public blackList;
-    uint public burnMin = 10000 * uint256(10)**decimals;
-    uint public burnMax = 20000000 * uint256(10)**decimals;
+    uint public burnMin = 10000 * 10**uint256(decimals);
+    uint public burnMax = 20000000 * 10**uint256(decimals);
 
     uint80 public insuranceFeeNumerator;
     uint80 public insuranceFeeDenominator;
     address public insurer;
+
+    event ChangeBurnBoundsEvent(uint newMin, uint newMax);
+    event Mint(address indexed to, uint256 amount);
 
     function TrueUSD(address _canMintWhiteList, address _canBurnWhiteList, address _blackList) public {
         totalSupply = 0;
@@ -39,14 +42,27 @@ contract TrueUSD is MintableToken, BurnableToken, NoOwner {
         super.burn(_value);
     }
 
-    function mint(address _to, uint256 _amount) onlyOwner public returns (bool) {
+    //Create _amount new tokens and transfer them to _to.
+    //Based on code by OpenZeppelin: https://github.com/OpenZeppelin/zeppelin-solidity/blob/master/contracts/token/MintableToken.sol
+    function mint(address _to, uint256 _amount) onlyOwner public {
         require(canReceiveMintWhitelist.onList(_to));
-        return super.mint(_to, _amount);
+        totalSupply = totalSupply.add(_amount);
+        balances[_to] = balances[_to].add(_amount);
+        Mint(_to, _amount);
+        Transfer(address(0), _to, _amount);
     }
 
+    //Change the minimum and maximum amount that can be burned at once. Burning
+    //may be disabled by setting both to 0 (this will not be done under normal
+    //operation, but we can't add checks to disallow it without losing a lot of
+    //flexibility since burning could also be as good as disabled
+    //by setting the minimum extremely high, and we don't want to lock
+    //in any particular cap for the minimum)
     function changeBurnBounds(uint newMin, uint newMax) onlyOwner public {
+        require(newMin <= newMax);
         burnMin = newMin;
         burnMax = newMax;
+        ChangeBurnBoundsEvent(newMin, newMax);
     }
 
     function transfer(address to, uint256 value) public returns (bool) {
