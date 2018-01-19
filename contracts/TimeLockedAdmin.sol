@@ -21,7 +21,9 @@ import './TrueUSD.sol';
 // (without a day's delay).
 contract TimeLockedAdmin is Ownable, HasNoEther, HasNoTokens {
 
-    uint public constant blocksDelay = 24*60*60/15; // 24 hours, assuming a 15 second blocktime
+    // 24 hours, assuming a 15 second blocktime.
+    // As long as this isn't too far off from reality it doesn't really matter.
+    uint public constant blocksDelay = 24*60*60/15;
 
     struct MintOperation {
         address to;
@@ -80,7 +82,7 @@ contract TimeLockedAdmin is Ownable, HasNoEther, HasNoTokens {
         blackList = AddressList(_blackList);
     }
 
-    event MintOperationEvent(MintOperation op, uint opIndex);
+    event MintOperationEvent(MintOperation op, uint opIndex, address indexed _to);
     event TransferOwnershipOperationEvent(TransferOwnershipOperation op);
     event ChangeBurnBoundsOperationEvent(ChangeBurnBoundsOperation op);
     event ChangeInsuranceFeeOperationEvent(ChangeInsuranceFeeOperation op);
@@ -90,7 +92,7 @@ contract TimeLockedAdmin is Ownable, HasNoEther, HasNoTokens {
     // admin initiates a request to mint _amount TrueUSD for account _to
     function requestMint(address _to, uint256 _amount) public onlyAdmin {
         MintOperation memory op = MintOperation(_to, _amount, admin, block.number + blocksDelay);
-        MintOperationEvent(op, mintOperations.length);
+        MintOperationEvent(op, mintOperations.length, _to);
         mintOperations.push(op);
     }
 
