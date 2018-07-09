@@ -46,7 +46,6 @@ contract TimeLockedController is HasNoEther, HasNoTokens, Claimable {
     event SetTrueUSD(TrueUSD newContract);
     event TransferAdminship(address indexed previousAdmin, address indexed newAdmin);
     event ChangeMintDelay(uint256 newDelay);
-    event RevokeMint(uint256 opIndex);
 
     constructor() public {
         admin = msg.sender;
@@ -73,11 +72,6 @@ contract TimeLockedController is HasNoEther, HasNoTokens, Claimable {
         uint256 value = op.value;
         delete mintOperations[_index];
         trueUSD.mint(to, value);
-    }
-
-    function revokeMint(uint256 _index) public onlyOwner {
-        delete mintOperations[_index];
-        emit RevokeMint(_index);
     }
 
     // Transfer ownership of _child to _newOwner
@@ -134,28 +128,8 @@ contract TimeLockedController is HasNoEther, HasNoTokens, Claimable {
     }
 
     // Future BurnableToken calls to trueUSD will be delegated to _delegate
-    function delegateToNewContract(DelegateBurnable _delegate,
-                                   Ownable _balanceSheet,
-                                   Ownable _alowanceSheet)public onlyOwner{
-        //initiate transfer ownership of storage contracts from trueUSD contract
-        requestReclaimContract(_balanceSheet);
-        requestReclaimContract(_alowanceSheet);
-
-        //claim ownership of storage contract
-        issueClaimOwnership(_balanceSheet);
-        issueClaimOwnership(_alowanceSheet);
-
-        //initiate transfer ownership of storage contracts to new delegate contract
-        transferChild(_balanceSheet,_delegate);
-        transferChild(_alowanceSheet,_delegate);
-
-        //call to claim the storage contract with the new delegate contract
-        require(address(_delegate).call(bytes4(keccak256("setBalanceSheet(address)")), _balanceSheet));
-        require(address(_delegate).call(bytes4(keccak256("setAllowanceSheet(address)")), _alowanceSheet));
-
-
+    function delegateToNewContract(DelegateBurnable _delegate) public onlyOwner {
         trueUSD.delegateToNewContract(_delegate);
-
     }
 
     // Incoming delegate* calls from _source will be accepted by trueUSD
