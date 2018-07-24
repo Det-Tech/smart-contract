@@ -2,6 +2,7 @@ pragma solidity ^0.4.23;
 
 import "./modularERC20/ModularPausableToken.sol";
 import "openzeppelin-solidity/contracts/ownership/NoOwner.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./CanDelegate.sol";
 import "./BurnableTokenWithBounds.sol";
 import "./CompliantToken.sol";
@@ -12,9 +13,12 @@ import "./WithdrawalToken.sol";
 // This is the top-level ERC20 contract, but most of the interesting functionality is
 // inherited - see the documentation on the corresponding contracts.
 contract TrueUSD is ModularPausableToken, NoOwner, BurnableTokenWithBounds, CompliantToken, TokenWithFees, WithdrawalToken, StandardDelegate, CanDelegate {
+    using SafeMath for *;
+
     string public name = "TrueUSD";
     string public symbol = "TUSD";
     uint8 public constant decimals = 18;
+    uint8 public constant rounding = 2;
 
     event ChangeTokenName(string newName, string newSymbol);
 
@@ -40,11 +44,11 @@ contract TrueUSD is ModularPausableToken, NoOwner, BurnableTokenWithBounds, Comp
     function mint(address _to, uint256 _value) onlyWhenNoDelegate public returns (bool) {
         super.mint(_to, _value);
     }
-    function setBalanceSheet(address _sheet) onlyWhenNoDelegate public {
-        super.setBalanceSheet(_sheet);
+    function setBalanceSheet(address _sheet) onlyWhenNoDelegate public returns (bool) {
+        return super.setBalanceSheet(_sheet);
     }
-    function setAllowanceSheet(address _sheet) onlyWhenNoDelegate public {
-        super.setAllowanceSheet(_sheet);
+    function setAllowanceSheet(address _sheet) onlyWhenNoDelegate public returns (bool) {
+        return super.setAllowanceSheet(_sheet);
     }
     function setBurnBounds(uint256 _min, uint256 _max) onlyWhenNoDelegate public {
         super.setBurnBounds(_min, _max);
@@ -79,6 +83,12 @@ contract TrueUSD is ModularPausableToken, NoOwner, BurnableTokenWithBounds, Comp
             _burnFeeFlat
         );
     }
+    function burnAllArgs(address _burner, uint256 _value ,string _note) internal {
+      //round down burn amount to cent
+      uint burnAmount = _value / (10 **uint256(decimals-rounding)) * (10 **uint256(decimals-rounding));
+      super.burnAllArgs(_burner, burnAmount, _note);
+    }
+
 
     // Alternatives to the normal NoOwner functions in case this contract's owner
     // can't own ether or tokens.
@@ -92,4 +102,5 @@ contract TrueUSD is ModularPausableToken, NoOwner, BurnableTokenWithBounds, Comp
         uint256 balance = token.balanceOf(this);
         token.safeTransfer(_to, balance);
     }
+
 }
