@@ -1,3 +1,94 @@
+import assertRevert from './helpers/assertRevert'
+import assertBalance from './helpers/assertBalance'
+import increaseTime, { duration } from './helpers/increaseTime'
+const Registry = artifacts.require("Registry")
+const TrueUSD = artifacts.require("TrueUSD")
+const BalanceSheet = artifacts.require("BalanceSheet")
+const AllowanceSheet = artifacts.require("AllowanceSheet")
+const TimeLockedController = artifacts.require("TimeLockedController")
+const TrueUSDMock = artifacts.require("TrueUSDMock")
+const ForceEther = artifacts.require("ForceEther")
+const DelegateBurnableMock = artifacts.require("DelegateBurnableMock")
+const FaultyDelegateBurnableMock1 = artifacts.require("FaultyDelegateBurnableMock1")
+const FaultyDelegateBurnableMock2 = artifacts.require("FaultyDelegateBurnableMock2")
+
+contract('TimeLockedController', function (accounts) {
+    describe('--TimeLockedController Tests--', function () {
+        const [_, owner, oneHundred, admin] = accounts
+
+        beforeEach(async function () {
+            this.registry = await Registry.new({ from: owner })
+            this.token = await TrueUSDMock.new(oneHundred, 100*10**18, { from: owner })
+            await this.token.setRegistry(this.registry.address, { from: owner })
+            this.controller = await TimeLockedController.new({ from: owner })
+            await this.registry.transferOwnership(this.controller.address, { from: owner })
+            await this.token.transferOwnership(this.controller.address, { from: owner })
+            await this.controller.issueClaimOwnership(this.registry.address, { from: owner })
+            await this.controller.issueClaimOwnership(this.token.address, { from: owner })
+            await this.controller.setTrueUSD(this.token.address, { from: owner })
+            await this.controller.transferAdminship(admin, { from: owner })
+            this.balanceSheet = await this.token.balances()
+            this.allowanceSheet = await this.token.allowances()
+            this.delegateContract = await DelegateBurnableMock.new({ from: owner })
+            this.faultyDelegateContract1 = await FaultyDelegateBurnableMock1.new({ from: owner })
+            this.faultyDelegateContract2 = await FaultyDelegateBurnableMock2.new({ from: owner })
+
+
+        })
+
+        describe('changeMintDelay', function () {
+            it('sets the mint delay', async function () {
+                await this.controller.changeMintDelay(duration.hours(12), { from: owner })
+
+                const delay = await this.controller.mintDelay()
+                assert.equal(delay, duration.hours(12))
+            })
+
+            it('emits an event', async function () {
+                const { logs } = await this.controller.changeMintDelay(duration.hours(12), { from: owner })
+
+                assert.equal(logs.length, 1)
+                assert.equal(logs[0].event, 'ChangeMintDelay')
+                assert.equal(logs[0].args.newDelay, duration.hours(12))
+            })
+
+            it('cannot be called by non-owner', async function () {
+                await assertRevert(this.controller.changeMintDelay(duration.hours(12), { from: admin }))
+            })
+        })
+
+        describe('revoke mint', function () {
+            it('request mint then revoke it', async function () {
+                await this.controller.requestMint(oneHundred, 10*10*18 , { from: admin })
+                const { logs } = await this.controller.revokeMint(0, {from: owner})
+                assert.equal(logs.length, 1)
+                assert.equal(logs[0].event, 'RevokeMint')
+                assert.equal(logs[0].args.opIndex, 0,"wrong")
+                await increaseTime(duration.hours(20))
+                await assertRevert(this.controller.finalizeMint(0, { from: admin }))
+
+            })
+        })
+
+        describe('setAttribute', function () {
+            const notes = "some notes"
+
+            it('sets the attribute', async function () {
+                await this.controller.setAttribute(this.registry.address, oneHundred, "foo", 3, notes, { from: owner })
+
+                const attr = await this.registry.hasAttribute(oneHundred, "foo")
+                assert.equal(attr, true)
+            })
+
+            it('can be called by admin', async function () {
+                await this.controller.setAttribute(this.registry.address, oneHundred, "foo", 3, notes, { from: admin })
+            })
+
+            it('cannot be called by others', async function () {
+                await assertRevert(this.controller.setAttribute(this.registry.address, oneHundred, "foo", 3, notes, { from: oneHundred }))
+            })
+        })
+
         describe('setDelegatedFrom', function () {
             it('sets delegatedFrom', async function () {
                 await this.controller.setDelegatedFrom(oneHundred, { from: owner })
@@ -7,7 +98,7 @@
             })
 
             it('cannot be called by non-owner', async function () {
-                await assertRevert(this.controller.setDelegatedFrom(oneHundred, { from: mintKey }))
+                await assertRevert(this.controller.setDelegatedFrom(oneHundred, { from: admin }))
             })
         })
 
@@ -22,7 +113,7 @@
             })
 
             it('cannot be called by non-owner', async function () {
-                await assertRevert(this.controller.changeTokenName("FooCoin", "FCN", { from: mintKey }))
+                await assertRevert(this.controller.changeTokenName("FooCoin", "FCN", { from: admin }))
             })
         })
 
@@ -36,8 +127,8 @@
                 assert.equal(max, 4*10**18)
             })
 
-            it('cannot be called by admin', async function () {
-                await assertRevert(this.controller.setBurnBounds(3*10**18, 4*10**18, { from: mintKey }))
+            it('can be called by admin', async function () {
+                await this.controller.setBurnBounds(3*10**18, 4*10**18, { from: owner })
             })
 
             it('cannot be called by others', async function () {
@@ -54,7 +145,7 @@
             })
 
             it('cannot be called by non-owner', async function () {
-                await assertRevert(this.controller.changeStaker(oneHundred, { from: mintKey }))
+                await assertRevert(this.controller.changeStaker(oneHundred, { from: admin }))
             })
         })
 
@@ -78,7 +169,7 @@
             it('cannot be called by non-owner', async function () {
                 await assertRevert(this.controller.delegateToNewContract(this.delegateContract.address,
                                                             this.balanceSheet,
-                                                            this.allowanceSheet, { from: mintKey }))
+                                                            this.allowanceSheet, { from: admin }))
             })
 
             it('cannot set delegate with balancesheet is not owned', async function () {
@@ -104,6 +195,24 @@
 
         })
 
+        describe('transferAdminship', function () {
+            it('emits an event', async function () {
+                const { logs } = await this.controller.transferAdminship(oneHundred, { from: owner })
+
+                assert.equal(logs.length, 1)
+                assert.equal(logs[0].event, 'TransferAdminship')
+                assert.equal(logs[0].args.previousAdmin, admin)
+                assert.equal(logs[0].args.newAdmin, oneHundred)
+            })
+
+            it('cannot set to 0x0', async function () {
+                await assertRevert(this.controller.transferAdminship(0x0, { from: owner }))
+            })
+
+            it('cannot be called by non-owner', async function () {
+                await assertRevert(this.controller.transferAdminship(oneHundred, { from: admin }))
+            })
+        })
 
         describe('requestReclaimContract', function () {
             it('reclaims the contract', async function () {
@@ -128,7 +237,7 @@
 
             it('cannot be called by non-owner', async function () {
                 const balances = await this.token.balances()
-                await assertRevert(this.controller.requestReclaimContract(balances, { from: mintKey }))
+                await assertRevert(this.controller.requestReclaimContract(balances, { from: admin }))
             })
         })
 
@@ -146,7 +255,7 @@
             it('cannot be called by non-owner', async function () {
                 const forceEther = await ForceEther.new({ from: oneHundred, value: "10000000000000000000" })
                 await forceEther.destroyAndSend(this.token.address)
-                await assertRevert(this.controller.requestReclaimEther({ from: mintKey }))
+                await assertRevert(this.controller.requestReclaimEther({ from: admin }))
             })
         })
 
@@ -159,7 +268,7 @@
 
             it('cannot be called by non-owner', async function () {
                 await this.token.transfer(this.token.address, 40*10**18, { from: oneHundred })
-                await assertRevert(this.controller.requestReclaimToken(this.token.address, { from: mintKey }))
+                await assertRevert(this.controller.requestReclaimToken(this.token.address, { from: admin }))
             })
         })
 
@@ -185,7 +294,61 @@
             })
 
             it('cannot be called by non-owner', async function () {
-                await assertRevert(this.controller.changeStakingFees(1, 2, 3, 4, 5, 6, 7, 8, { from: mintKey }))
+                await assertRevert(this.controller.changeStakingFees(1, 2, 3, 4, 5, 6, 7, 8, { from: admin }))
             })
         })
     })
+
+    describe('--TimeLockedController old test--', function () {
+        it("should work", async function () {
+            const registry = await Registry.new()
+            const balances = await BalanceSheet.new()
+            const allowances = await AllowanceSheet.new()
+            const trueUSD = await TrueUSD.new()
+            await balances.transferOwnership(trueUSD.address)
+            await allowances.transferOwnership(trueUSD.address)
+            await trueUSD.setBalanceSheet(balances.address)
+            await trueUSD.setAllowanceSheet(allowances.address)
+            await registry.setAttribute(accounts[3], "hasPassedKYC/AML", 1, "some notes", { from: accounts[0] })
+            const timeLockedController = await TimeLockedController.new({ from: accounts[0] })
+            await registry.transferOwnership(timeLockedController.address, { from: accounts[0] })
+            await trueUSD.transferOwnership(timeLockedController.address, { from: accounts[0] })
+            await timeLockedController.issueClaimOwnership(registry.address, { from: accounts[0] })
+            await timeLockedController.issueClaimOwnership(trueUSD.address, { from: accounts[0] })
+            await timeLockedController.setTrueUSD(trueUSD.address)
+            await timeLockedController.setRegistry(registry.address, { from: accounts[0] })
+            await assertRevert(trueUSD.mint(accounts[3], 10, { from: accounts[0] })) //user 0 is no longer the owner
+            await timeLockedController.requestMint(accounts[3], 9, { from: accounts[0] })
+            await timeLockedController.finalizeMint(0, { from: accounts[0] }) // the owner can finalize immediately
+            await assertBalance(trueUSD, accounts[3], 9)
+            await assertRevert(timeLockedController.requestMint(accounts[3], 200, { from: accounts[1] })) //user 1 is not (yet) the admin
+            await timeLockedController.transferAdminship(accounts[1], { from: accounts[0] })
+            await timeLockedController.requestMint(accounts[3], 200, { from: accounts[1] })
+            await assertRevert(timeLockedController.finalizeMint(1, { from: accounts[3] })) //mint request cannot be finalized this early
+            await increaseTime(duration.hours(12))
+            await assertRevert(timeLockedController.finalizeMint(1, { from: accounts[3] })) //still not enough time has passed
+            await increaseTime(duration.hours(12))
+            await timeLockedController.finalizeMint(1, { from: accounts[1] }) //only target of mint can finalize
+            await assertBalance(trueUSD, accounts[3], 209)
+            await timeLockedController.requestMint(accounts[3], 3000, { from: accounts[1] })
+            await timeLockedController.requestMint(accounts[3], 40000, { from: accounts[1] })
+            await increaseTime(duration.days(1))
+            await timeLockedController.finalizeMint(3, { from: accounts[1] })
+            await assertRevert(timeLockedController.finalizeMint(3, { from: accounts[1] })) //can't double-finalize
+            await assertBalance(trueUSD, accounts[3], 40209)
+            await timeLockedController.transferAdminship(accounts[2], { from: accounts[0] })
+            await assertRevert(timeLockedController.finalizeMint(2, { from: accounts[3] })) //can't finalize because admin has been changed
+            await assertRevert(timeLockedController.transferChild(trueUSD.address, accounts[2], { from: accounts[1] })) //only owner
+            await timeLockedController.requestMint(accounts[3], 500000, { from: accounts[2] })
+            await timeLockedController.transferChild(trueUSD.address, accounts[2], { from: accounts[0] })
+            await timeLockedController.transferChild(registry.address, accounts[2], { from: accounts[0] })
+            await trueUSD.claimOwnership({ from: accounts[2] })
+            await assertRevert(timeLockedController.finalizeMint(4, { from: accounts[2] })) //timeLockedController is no longer the owner of trueUSD
+            await trueUSD.transferOwnership(timeLockedController.address, { from: accounts[2] })
+            await timeLockedController.issueClaimOwnership(trueUSD.address, { from: accounts[0] })
+            await increaseTime(duration.days(1))
+            await timeLockedController.finalizeMint(4, { from: accounts[2] })
+            await assertBalance(trueUSD, accounts[3], 540209)
+        })
+    })
+})
