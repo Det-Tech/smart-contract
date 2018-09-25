@@ -13,7 +13,7 @@ import "./ERC20events.sol";
  * @title Basic token
  * @dev Basic version of StandardToken, with no allowances.
  */
-contract ModularBasicToken is ERC20Basic, Claimable,ERC20events {
+contract ModularBasicToken is ERC20, Claimable,ERC20events {
     using SafeMath for uint256;
 
     BalanceSheet public balances;

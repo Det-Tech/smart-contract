@@ -1,7 +1,7 @@
 pragma solidity ^0.4.23;
 
-import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./ModularBasicToken.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "./AllowanceSheet.sol";
 
 /**
@@ -92,7 +92,7 @@ contract ModularStandardToken is ERC20, ModularBasicToken {
 
     function increaseApprovalAllArgs(address _spender, uint256 _addedValue, address _tokenHolder) internal {
         allowances.addAllowance(_tokenHolder, _spender, _addedValue);
-        ERC20events(eventDelegateor).emitApprovalEvent(_tokenHolder, _spender, allowances.allowanceOf(_tokenHolder, _spender));
+        emitApprovalEvent(_tokenHolder, _spender, allowances.allowanceOf(_tokenHolder, _spender));
     }
 
     /**
@@ -117,7 +117,7 @@ contract ModularStandardToken is ERC20, ModularBasicToken {
         } else {
             allowances.subAllowance(_tokenHolder, _spender, _subtractedValue);
         }
-        ERC20events(eventDelegateor).emitApprovalEvent(_tokenHolder,_spender, allowances.allowanceOf(_tokenHolder, _spender));
+        emitApprovalEvent(_tokenHolder, _spender, allowances.allowanceOf(_tokenHolder, _spender));
     }
     
 
