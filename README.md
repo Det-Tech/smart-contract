@@ -36,7 +36,7 @@ See the section entitled Delegation Process below.
 
 This ensures that only users who have passed a KYC/AML check can receive newly minted tokens or
 trade on certain restricted exchanges. It also allows for blacklisting of bad actors in accordance
-with the [TrueCoin Terms of Use](https://www.trusttoken.com/trueusd/terms-of-use).
+with the [TrueCoin Terms of Use](https://www.trusttoken.com/terms-of-use/).
 
 ### TokenWithFees.sol
 
@@ -70,14 +70,14 @@ call delegateToNewContract(\_newContractAddress, \_balanceSheetAddress, \_allowa
 
 ## Testing
 
-Ensure the registry submodule is in the root directory
+Initialize the registry submodule in the root directory:
 
--`rm -r registry` -`git clone git@github.com:trusttoken/registry.git`
+- `git submodule init && git submodule update``
 
 To run the tests and generate a code coverage report:
 
 - `npm install`
-- `./node_modules/.bin/solidity-coverage`
+- `npm test`
 
 ## Other Information
 
