@@ -75,7 +75,7 @@ contract TimeLockedController is HasRegistry, HasNoEther, HasNoTokens, Claimable
     string constant public IS_MINT_APPROVER = "isTUSDMintApprover";
 
     modifier onlyFastPauseOrOwner() {
-        require(msg.sender == trueUsdFastPause || msg.sender == owner, "must be mintKey or owner");
+        require(msg.sender == trueUsdFastPause || msg.sender == owner, "must be pauser or owner");
         _;
     }
 
@@ -102,25 +102,24 @@ contract TimeLockedController is HasRegistry, HasNoEther, HasNoTokens, Claimable
         _;
     }
 
-    //mint operations by the mintkey cannot be processed on weekend
-    modifier notOnWeekend() {
+    //mint operations by the mintkey cannot be processed on weekends or defined holidays
+    modifier notOnWeekendOrHoliday() {
+        uint shiftedTimestamp = now.sub(timeZoneDiff);
         if (msg.sender != owner) {
-            require(dateTime.getWeekday(now.sub(timeZoneDiff)) != 0, "cannot mint on weekend");
-            require(dateTime.getWeekday(now.sub(timeZoneDiff)) != 6, "cannot mint on weekend");
-        }
-        _;
-    }
+            //weekend
+            uint8 weekday = dateTime.getWeekday(shiftedTimestamp);
+            require(weekday != 0, "cannot mint on weekend");
+            require(weekday != 6, "cannot mint on weekend");
 
-    //mint operations by the mintkey cannot be processed on defined holidays
-    modifier notOnHoliday() {
-        if (msg.sender != owner) {
-            uint16 year = dateTime.getYear(now.sub(timeZoneDiff));
-            uint8 month = dateTime.getMonth(now.sub(timeZoneDiff));
-            uint8 day = dateTime.getDay(now.sub(timeZoneDiff));
+            //holidays
+            uint16 year = dateTime.getYear(shiftedTimestamp);
+            uint8 month = dateTime.getMonth(shiftedTimestamp);
+            uint8 day = dateTime.getDay(shiftedTimestamp);
             require(!holidays[keccak256(year, month, day)], "not on holiday");
         }
         _;
     }
+
 
     event RequestMint(address indexed to, address indexed mintKey, uint256 indexed value, uint256 requestedTime, uint256 opIndex);
     event FinalizeMint(address indexed to, address indexed mintKey, uint256 indexed value, uint256 opIndex);
@@ -198,13 +197,13 @@ contract TimeLockedController is HasRegistry, HasNoEther, HasNoTokens, Claimable
      * @param _to the address to mint to
      * @param _value the amount requested
      */
-    function requestMint(address _to, uint256 _value) external mintNotPaused notOnHoliday notOnWeekend onlyMintKeyOrOwner {
+    function requestMint(address _to, uint256 _value) external mintNotPaused notOnWeekendOrHoliday onlyMintKeyOrOwner {
         uint currentTimeZoneTime = now.sub(timeZoneDiff);
         if (dateTime.getMonth(currentTimeZoneTime) == dateTime.getMonth(timeOfLastMint) &&
             dateTime.getDay(currentTimeZoneTime) == dateTime.getDay(timeOfLastMint)) {
             mintedToday = mintedToday.add(_value);
             require(mintedToday <= dailyMintLimit, "over the mint limit");
-        }else {
+        } else {
             mintedToday = _value;
         }
         timeOfLastMint = currentTimeZoneTime;
@@ -254,7 +253,7 @@ contract TimeLockedController is HasRegistry, HasNoEther, HasNoTokens, Claimable
             if (numberOfApproval < minSmallMintApproval) {
                 return false;
             }
-        }else {
+        } else {
             if (numberOfApproval < minLargeMintApproval) {
                 return false;
             }
@@ -266,7 +265,7 @@ contract TimeLockedController is HasRegistry, HasNoEther, HasNoTokens, Claimable
      * @dev compute if a mint request meets all the requirements to be finalized
      utility function for a front end
      */
-    function canFinalize(uint256 _index) public view notOnHoliday notOnWeekend returns(bool) {
+    function canFinalize(uint256 _index) public view notOnWeekendOrHoliday returns(bool) {
         MintOperation memory op = mintOperations[_index];
         require(op.requestedBlock > mintReqInValidBeforeThisBlock, "this mint is invalid");
         require(!op.paused, "this mint is paused");
@@ -279,7 +278,7 @@ contract TimeLockedController is HasRegistry, HasNoEther, HasNoTokens, Claimable
      * @dev finalize a mint request, mint the amount requested to the specified address
      @param _index of the request (visible in the RequestMint event accompanying the original request)
      */
-    function finalizeMint(uint256 _index) external mintNotPaused notOnHoliday notOnWeekend onlyMintKeyOrOwner {
+    function finalizeMint(uint256 _index) external mintNotPaused notOnWeekendOrHoliday onlyMintKeyOrOwner {
         if (msg.sender == mintKey) {
             require(canFinalize(_index));
         }
@@ -314,8 +313,12 @@ contract TimeLockedController is HasRegistry, HasNoEther, HasNoTokens, Claimable
     /** 
     *@dev return current time in pacific time
     */
-    function returnTime() public view returns(uint256) {
+    function returnTime() public view returns (uint256) {
         return now.sub(timeZoneDiff);
+    }
+
+    function mintOperationCount() public view returns (uint256) {
+        return mintOperations.length;
     }
 
     /*
