@@ -9,14 +9,13 @@ Used to signal which fork is the supported fork for asset back tokens
 */
 contract GlobalPause is Claimable {
     bool public AllTokenPaused = false;
-    string public pauseNotice;
+    bool public SupportedFork = true;
 
-    function pauseAllTokens(bool _status, string _notice) public onlyOwner {
+    function pauseAllTokens(bool _status) public onlyOwner {
         AllTokenPaused = _status;
-        pauseNotice = _notice;
     }
 
-    function requireNotPaused() public {
-        require(!AllTokenPaused, pauseNotice);
+    function updateForkStatus(bool _status) public onlyOwner {
+        SupportedFork = _status;
     }
 }
