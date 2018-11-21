@@ -41,6 +41,8 @@ contract TimeLockedController {
         mapping(address => bool) approved; 
     }
 
+    mapping(bytes32 => bool) public holidays; //hash of dates to boolean
+
     address public owner;
     address public pendingOwner;
 
@@ -323,9 +325,6 @@ contract TimeLockedController {
         emit FinalizeMint(to, value, _index, msg.sender);
     }
 
-    /**
-     * assumption: only invoked when canFinalize
-     */
     function _subtractFromMintPool(uint256 _value) internal {
         if (_value <= ratifiedMintPool && _value <= ratifiedMintThreshold) {
             ratifiedMintPool = ratifiedMintPool.sub(_value);
@@ -338,6 +337,9 @@ contract TimeLockedController {
      * @dev compute if the number of approvals is enough for a given mint amount
      */
     function hasEnoughApproval(uint256 _numberOfApproval, uint256 _value) public view returns (bool) {
+        if (msg.sender == owner) {
+            return true;
+        }
         if (_value <= ratifiedMintPool && _value <= ratifiedMintThreshold) {
             if (_numberOfApproval >= RATIFY_MINT_SIGS){
                 return true;
@@ -347,9 +349,6 @@ contract TimeLockedController {
             if (_numberOfApproval >= JUMBO_MINT_SIGS){
                 return true;
             }
-        }
-        if (msg.sender == owner) {
-            return true;
         }
         return false;
     }
@@ -534,7 +533,7 @@ contract TimeLockedController {
     in order to transfer it to an upgraded TrueUSD contract.
     *@param _other address of the contract to claim ownership of
     */
-    function requestReclaimContract(Ownable _other) public onlyOwner {
+    function requestReclaimContract(HasOwner _other) public onlyOwner {
         trueUSD.reclaimContract(_other);
         emit RequestReclaimContract(_other);
     }

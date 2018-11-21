@@ -65,8 +65,9 @@ GasRefundToken {
     /**  
     *@dev allows owner of TrueUSD to gain ownership of any contract that TrueUSD currently owns
     */
-    function reclaimContract(Ownable _ownable) external onlyOwner {
-        _ownable.transferOwnership(owner);
+    function reclaimContract(address contractAddr) external onlyOwner {
+        Ownable contractInst = Ownable(contractAddr);
+        contractInst.transferOwnership(owner);
     }
 
     function burnAllArgs(address _burner, uint256 _value, string _note) internal {
