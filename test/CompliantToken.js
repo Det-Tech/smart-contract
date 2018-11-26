@@ -39,12 +39,12 @@ function compliantTokenTests([owner, oneHundred, anotherAccount], transfersToZer
 
                 it('rejects burn when user is on blacklist', async function () {
                     await this.registry.setAttribute(oneHundred, "isBlacklisted", 1, notes, { from: owner })
-                    await assertRevert(this.token.burn(20*10**18, "burn note", { from: oneHundred }))
+                    await assertRevert(this.token.burn(20*10**18, { from: oneHundred }))
                 })
             })
 
             it('rejects burn when user is not on burn whitelist', async function () {
-                await assertRevert(this.token.burn(20*10**18, "burn note", { from: oneHundred }))
+                await assertRevert(this.token.burn(20*10**18, { from: oneHundred }))
             })
         })
 
@@ -130,17 +130,13 @@ function compliantTokenTests([owner, oneHundred, anotherAccount], transfersToZer
                 assert.equal(balance, 0)
             })
 
-            it('emits events', async function () {
+            it('emits an event', async function () {
                 const { logs } = await this.token.wipeBlacklistedAccount(oneHundred, { from: owner })
 
-                assert.equal(logs.length, 2)
+                assert.equal(logs.length, 1)
                 assert.equal(logs[0].event, 'WipeBlacklistedAccount')
                 assert.equal(logs[0].args.account, oneHundred)
                 assert.equal(logs[0].args.balance, 100*10**18)
-                assert.equal(logs[1].event, 'Transfer')
-                assert.equal(logs[1].args.value, 100*10**18)
-                assert.equal(logs[1].args.to, 0)
-                assert.equal(logs[1].args.from, oneHundred)
             })
 
             it('cannot be called by non-owner', async function () {

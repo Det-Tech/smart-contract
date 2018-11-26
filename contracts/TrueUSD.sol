@@ -7,15 +7,19 @@ import "./CompliantToken.sol";
 import "./RedeemableTokenWithFees.sol";
 import "./DepositToken.sol";
 import "./GasRefundToken.sol";
+import "./TokenWithHook.sol";
 
-// This is the top-level ERC20 contract, but most of the interesting functionality is
-// inherited - see the documentation on the corresponding contracts.
+/** @title TrueUSD
+* @dev This is the top-level ERC20 contract, but most of the interesting functionality is
+* inherited - see the documentation on the corresponding contracts.
+*/
 contract TrueUSD is 
 ModularPausableToken, 
 BurnableTokenWithBounds, 
-CompliantToken, 
-DepositToken,
+CompliantToken,
 RedeemableTokenWithFees,
+TokenWithHook,
+DepositToken,
 GasRefundToken {
     using SafeMath for *;
 
@@ -65,14 +69,13 @@ GasRefundToken {
     /**  
     *@dev allows owner of TrueUSD to gain ownership of any contract that TrueUSD currently owns
     */
-    function reclaimContract(address contractAddr) external onlyOwner {
-        Ownable contractInst = Ownable(contractAddr);
-        contractInst.transferOwnership(owner);
+    function reclaimContract(Ownable _ownable) external onlyOwner {
+        _ownable.transferOwnership(owner);
     }
 
-    function burnAllArgs(address _burner, uint256 _value, string _note) internal {
+    function burnAllArgs(address _burner, uint256 _value) internal {
         //round down burn amount so that the lowest amount allowed is 1 cent
         uint burnAmount = _value.div(10 ** uint256(DECIMALS - ROUNDING)).mul(10 ** uint256(DECIMALS - ROUNDING));
-        super.burnAllArgs(_burner, burnAmount, _note);
+        super.burnAllArgs(_burner, burnAmount);
     }
 }

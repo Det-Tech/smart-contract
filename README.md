@@ -17,6 +17,25 @@ and AllowanceSheet.sol) instead of mappings in their own storage.
 The ERCevents contract is used to ensure that events are still emitted from the original address even
 after the TrueUSD contract is delegated.
 
+### Admins/...
+### TokenController.sol
+
+This contract is the owner of TrueUSD.sol. Consists of an Owner key, Mint Pause Keys,
+Mint Key, and Mint Ratify Keys. It's also responsible for configuring constants and upgrading the token contract
+
+### MultiSigOwner.sol
+
+This contract is the owner of TokenController.sol. It turns every function that only the owner can access into a multisig function that requires 2/3 approvals.
+
+
+### Proxy/...
+
+### ProxyStorage.sol
+Storage layout of TrueUSD. Makes upgrades safer.
+
+### HasOwner.sol
+Our own implementation of Claimable Contract.
+
 ### BurnableTokenWithBounds.sol
 
 This limits the minimum and maximum number of tokens that can be burned (redeemed) at once.
@@ -30,36 +49,73 @@ with the [TrueCoin Terms of Use](https://www.trusttoken.com/terms-of-use/).
 ### RedeemableTokenWithFees.sol
 
 This allows for transaction fees.
-Also makes it easier for users to burn tokens (i.e. redeem them for USD) by treating sends to 0x0 as
-burn operations.
-Implements Redemption addresses
+
+Also makes it easier for users to burn tokens (i.e. redeem them for USD) by treating sends to 0x0 as burn operations.
+
+Implements Redemption address feature.
+
+### DepositToken.sol
+Allow users to register deposit addresses. 
+
+### GasRefundToken.sol
+Enable transfer and mint methods to be sponsored. Reduce gas cost of transfer and mint.
 
 ### TrueUSD.sol
 
 This is the top-level ERC20 contract tying together all the previously mentioned functionality.
 
-### TokenController.sol
 
-This contract is the initial owner of TrueUSD.sol. Consists of an Owner key, Mint Pause Keys,
-Mint Key, and Mint Approval Keys. It also imposes time delays on mint requests to maximize security.
+## Upgrade Process
 
-### MultiSigOwner.sol
+There are three main parts to the system of smart contracts. TrueUSD Token, TokenController, and MultisigOwner. Each contract will sit behind a delegate proxy contract. So to upgrade, the admin needs to point the implementation in the delegate proxy to a new instance. 
 
-This contract is the owner of TimeLockedController.sol. It turns every function that only the owner can access into a multisig function that requires 2/3 approvals.
-
-### Delegation Process
-
+TokenController is the owner of TrueUSD and the also the proxyOwner of TrueUSD proxy
+Multisig is the owner of TokenController and the also the proxyOwner of TokenController proxy.
+Multisig is also the proxyOwner of its own proxy.
 
 ## Testing
 
 Initialize the registry submodule in the root directory:
-
-- `git submodule init && git submodule update``
+```bash
+git submodule init && git submodule update
+```
 
 To run the tests and generate a code coverage report:
+```bash
+npm install
+npm test
+```
 
-- `npm install`
-- `npm test`
+## Contract Structure
+
+    ├── modularERC20  
+    │   ├── AllowanceSheet         
+    │   ├── BalanceSheet        
+    │   ├── ModularBasicToken        
+    │   ├── ModularStandardToken        
+    │   ├── ModularBurnableToken        
+    │   ├── ModularMintableToken        
+    │   └── ModularPausableToken                
+    ├── Admin                 
+    │   ├── TokenController        
+    │   └── MultisigOwner               
+    ├── Proxy
+    │   ├── Proxy        
+    │   ├── UpgradeabilityProxy        
+    │   └── OwnedUpgradeabilityProxy               
+    ├── utilities
+    │   ├── FastPauseMints        
+    │   ├── FastPauseTrueUSD        
+    │   └── GlobalPause               
+    ├── ProxyStorage
+    ├── HasOwner
+    ├── BurnableTokenWithBounds
+    ├── CompliantToken
+    ├── RedeemableTokenWithFees
+    ├── DepositToken
+    ├── GasRefundToken
+    ├── TrueUSD
+
 
 ## Other Information
 

@@ -1,18 +1,20 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
 import "./modularERC20/ModularPausableToken.sol";
 
-//Burning functions as redeeming money from the system. The platform will keep track of who burns coins,
-//and will send them back the equivalent amount of money (rounded down to the nearest cent).
-//The API for burning is inherited: burn(uint256 _value)
+/**
+ * @title Burnable Token WithBounds
+ * @dev Burning functions as redeeming money from the system. The platform will keep track of who burns coins,
+ * and will send them back the equivalent amount of money (rounded down to the nearest cent).
+ */
 contract BurnableTokenWithBounds is ModularPausableToken {
 
     event SetBurnBounds(uint256 newMin, uint256 newMax);
 
-    function burnAllArgs(address _burner, uint256 _value, string _note) internal {
+    function burnAllArgs(address _burner, uint256 _value) internal {
         require(_value >= burnMin, "below min burn bound");
         require(_value <= burnMax, "exceeds max burn bound");
-        super.burnAllArgs(_burner, _value, _note);
+        super.burnAllArgs(_burner, _value);
     }
 
     //Change the minimum and maximum amount that can be burned at once. Burning

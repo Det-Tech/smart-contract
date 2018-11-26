@@ -1,11 +1,12 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
 import "./ProxyStorage.sol";
 
 /**
- * @title Claimable
- * @dev The Claimable contract has an owner address, and provides basic authorization control
- * functions, this simplifies the implementation of "user permissions".
+ * @title HasOwner
+ * @dev The HasOwner contract is a copy of Claimable Contract by Zeppelin. 
+ and provides basic authorization control functions. Inherits storage layout of 
+ ProxyStorage.
  */
 contract HasOwner is ProxyStorage {
 
