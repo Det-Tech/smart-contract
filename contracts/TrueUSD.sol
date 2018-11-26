@@ -4,10 +4,9 @@ import "./modularERC20/ModularPausableToken.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./BurnableTokenWithBounds.sol";
 import "./CompliantToken.sol";
-import "./RedeemableTokenWithFees.sol";
+import "./RedeemableToken.sol";
 import "./DepositToken.sol";
 import "./GasRefundToken.sol";
-import "./TokenWithHook.sol";
 
 /** @title TrueUSD
 * @dev This is the top-level ERC20 contract, but most of the interesting functionality is
@@ -18,9 +17,8 @@ ModularPausableToken,
 BurnableTokenWithBounds, 
 CompliantToken, 
 DepositToken,
-RedeemableTokenWithFees,
-GasRefundToken,
-TokenWithHook {
+RedeemableToken,
+GasRefundToken {
     using SafeMath for *;
 
     uint8 public constant DECIMALS = 18;
@@ -39,7 +37,6 @@ TokenWithHook {
         totalSupply_ = _totalSupply;
         burnMin = 10000 * 10**uint256(DECIMALS);
         burnMax = 20000000 * 10**uint256(DECIMALS);
-        staker = msg.sender;
         name = "TrueUSD";
         symbol = "TUSD";
     }
