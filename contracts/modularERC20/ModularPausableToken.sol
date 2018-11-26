@@ -17,7 +17,7 @@ contract ModularPausableToken is ModularMintableToken {
     * @dev Modifier to make a function callable only when the contract is not paused.
     */
     modifier whenNotPaused() {
-        require(!paused, "Token Not Paused");
+        require(!paused);
         _;
     }
 
@@ -25,7 +25,7 @@ contract ModularPausableToken is ModularMintableToken {
     * @dev Modifier to make a function callable only when the contract is paused.
     */
     modifier whenPaused() {
-        require(paused, "Token Paused");
+        require(paused);
         _;
     }
 
@@ -77,7 +77,7 @@ contract ModularPausableToken is ModularMintableToken {
         super.decreaseApprovalAllArgs(_spender, _subtractedValue, _tokenHolder);
     }
 
-    function burnAllArgs(address _burner, uint256 _value) internal whenNotPaused notOnSupportedChain {
-        super.burnAllArgs(_burner, _value);
+    function burnAllArgs(address _burner, uint256 _value, string _note) internal whenNotPaused notOnSupportedChain {
+        super.burnAllArgs(_burner, _value, _note);
     }
 }

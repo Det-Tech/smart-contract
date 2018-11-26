@@ -6,12 +6,16 @@ const TrueUSD = artifacts.require("TrueUSD")
 const TrueUSDMock = artifacts.require("TrueUSDMock")
 const BalanceSheet = artifacts.require("BalanceSheet")
 const AllowanceSheet = artifacts.require("AllowanceSheet")
+const ForceEther = artifacts.require("ForceEther")
 const GlobalPause = artifacts.require("GlobalPause")
 const Proxy = artifacts.require("OwnedUpgradeabilityProxy")
-const TokenController = artifacts.require("TokenController")
+const FastPauseTrueUSD = artifacts.require("FastPauseTrueUSD")
+const TimeLockedController = artifacts.require("TimeLockedController")
+const MultisigOwner = artifacts.require("MultisigOwner")
 
 contract('--Full upgrade process --', function (accounts) {
     const [_, owner, oneHundred, otherAddress, mintKey, pauseKey, pauseKey2, approver1, approver2, approver3, spender] = accounts
+    const notes = "some notes"
 
     describe('--Set up proxy--', function () {
         beforeEach(async function () {
@@ -21,10 +25,10 @@ contract('--Full upgrade process --', function (accounts) {
             this.tokenImplementation = await TrueUSD.new({ from: owner })
             this.token = await TrueUSD.at(this.tokenProxy.address)
             await this.tokenProxy.upgradeTo(this.tokenImplementation.address,{ from: owner })
-            this.controllerImplementation = await TokenController.new({ from: owner })
+            this.controllerImplementation = await TimeLockedController.new({ from: owner })
             this.controllerProxy = await Proxy.new({ from: owner })
             await this.controllerProxy.upgradeTo(this.controllerImplementation.address,{ from: owner })
-            this.controller = await TokenController.at(this.controllerProxy.address)
+            this.controller = await TimeLockedController.at(this.controllerProxy.address)
             await this.controller.initialize({from: owner})
             await this.controller.setTrueUSD(this.tokenProxy.address, { from: owner })
             await this.controller.transferMintKey(mintKey, { from: owner })
@@ -53,6 +57,7 @@ contract('--Full upgrade process --', function (accounts) {
                                                        this.balanceSheet.address,
                                                        this.allowanceSheet.address, 
                                                        { from: owner })
+            await this.controller.changeStakingFees(0,1000,0,1000,0,0,1000,0, {from: owner})                
             await this.controller.setTusdRegistry(this.registry.address, { from: owner })
         })
         it('conducts the full upgrade from the current on chain contract', async function(){
@@ -60,7 +65,7 @@ contract('--Full upgrade process --', function (accounts) {
             await this.onChainToken.initialize(1000* 10 ^ 18, {from: owner})
             this.balanceSheet = await this.onChainToken.balances()
             this.allowanceSheet = await this.onChainToken.allowances()
-            this.onChainController = await TokenController.new({from: owner})
+            this.onChainController = await TimeLockedController.new({from: owner})
             await this.onChainToken.transferOwnership(this.onChainController.address, { from: owner })
             await this.onChainController.initialize({from: owner})
             await this.onChainController.issueClaimOwnership(this.onChainToken.address, { from: owner })
@@ -76,6 +81,7 @@ contract('--Full upgrade process --', function (accounts) {
 
             await this.controller.claimStorageForProxy(this.token.address,this.balanceSheet, this.allowanceSheet, { from: owner })
             await this.controller.setGlobalPause(this.globalPause.address, { from: owner }) 
+            await this.controller.changeStakingFees(0,1000,0,1000,0,0,1000,0, {from: owner})                
             
             await this.controller.setTusdRegistry(this.registry.address, { from: owner })
             await assertBalance(this.token, oneHundred, 1000* 10 ^ 18)

@@ -4,20 +4,18 @@ import "./modularERC20/ModularPausableToken.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./BurnableTokenWithBounds.sol";
 import "./CompliantToken.sol";
-import "./RedeemableToken.sol";
+import "./RedeemableTokenWithFees.sol";
 import "./DepositToken.sol";
 import "./GasRefundToken.sol";
 
-/** @title TrueUSD
-* @dev This is the top-level ERC20 contract, but most of the interesting functionality is
-* inherited - see the documentation on the corresponding contracts.
-*/
+// This is the top-level ERC20 contract, but most of the interesting functionality is
+// inherited - see the documentation on the corresponding contracts.
 contract TrueUSD is 
 ModularPausableToken, 
 BurnableTokenWithBounds, 
 CompliantToken, 
 DepositToken,
-RedeemableToken,
+RedeemableTokenWithFees,
 GasRefundToken {
     using SafeMath for *;
 
@@ -37,6 +35,7 @@ GasRefundToken {
         totalSupply_ = _totalSupply;
         burnMin = 10000 * 10**uint256(DECIMALS);
         burnMax = 20000000 * 10**uint256(DECIMALS);
+        staker = msg.sender;
         name = "TrueUSD";
         symbol = "TUSD";
     }
@@ -66,13 +65,14 @@ GasRefundToken {
     /**  
     *@dev allows owner of TrueUSD to gain ownership of any contract that TrueUSD currently owns
     */
-    function reclaimContract(Ownable _ownable) external onlyOwner {
-        _ownable.transferOwnership(owner);
+    function reclaimContract(address contractAddr) external onlyOwner {
+        Ownable contractInst = Ownable(contractAddr);
+        contractInst.transferOwnership(owner);
     }
 
-    function burnAllArgs(address _burner, uint256 _value) internal {
+    function burnAllArgs(address _burner, uint256 _value, string _note) internal {
         //round down burn amount so that the lowest amount allowed is 1 cent
         uint burnAmount = _value.div(10 ** uint256(DECIMALS - ROUNDING)).mul(10 ** uint256(DECIMALS - ROUNDING));
-        super.burnAllArgs(_burner, burnAmount);
+        super.burnAllArgs(_burner, burnAmount, _note);
     }
 }

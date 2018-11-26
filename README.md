@@ -17,103 +17,49 @@ and AllowanceSheet.sol) instead of mappings in their own storage.
 The ERCevents contract is used to ensure that events are still emitted from the original address even
 after the TrueUSD contract is delegated.
 
-### Admins/...
-### TokenController.sol
-
-This contract is the owner of TrueUSD.sol. Consists of an Owner key, Mint Pause Keys,
-Mint Key, and Mint Ratify Keys. It's also responsible for configuring constants and upgrading the token contract
-
-### MultiSigOwner.sol
-
-This contract is the owner of TokenController.sol. It turns every function that only the owner can access into a multisig function that requires 2/3 approvals.
-
-
-### Proxy/...
-
-### ProxyStorage.sol
-Storage layout of TrueUSD. Makes upgrades safer.
-
-### HasOwner.sol
-Our own implementation of Claimable Contract.
-
 ### BurnableTokenWithBounds.sol
 
 This limits the minimum and maximum number of tokens that can be burned (redeemed) at once.
 
 ### CompliantToken.sol
 
-This ensures that only users who have passed a KYC/AML check can receive newly minted tokens.
-It also allows for blacklisting of bad actors in accordance
+This ensures that only users who have passed a KYC/AML check can receive newly minted tokens or
+trade on certain restricted exchanges. It also allows for blacklisting of bad actors in accordance
 with the [TrueCoin Terms of Use](https://www.trusttoken.com/terms-of-use/).
 
-### RedeemableToken.sol
+### RedeemableTokenWithFees.sol
 
-Makes it easier for users to burn tokens (i.e. redeem them for USD) by treating sends to 0x0 as burn operations.
-
-Implements Redemption address feature.
-
-### DepositToken.sol
-Allow users to register deposit addresses. 
-
-### GasRefundToken.sol
-Enable transfer and mint methods to be sponsored. Reduce gas cost of transfer and mint.
+This allows for transaction fees.
+Also makes it easier for users to burn tokens (i.e. redeem them for USD) by treating sends to 0x0 as
+burn operations.
+Implements Redemption addresses
 
 ### TrueUSD.sol
 
 This is the top-level ERC20 contract tying together all the previously mentioned functionality.
 
+### TokenController.sol
 
-## Upgrade Process
+This contract is the initial owner of TrueUSD.sol. Consists of an Owner key, Mint Pause Keys,
+Mint Key, and Mint Approval Keys. It also imposes time delays on mint requests to maximize security.
 
-There are three main parts to the system of smart contracts. TrueUSD Token, TokenController, and MultisigOwner. Each contract will sit behind a delegate proxy contract. So to upgrade, the admin needs to point the implementation in the delegate proxy to a new instance. 
+### MultiSigOwner.sol
 
-TokenController is the owner of TrueUSD and the also the proxyOwner of TrueUSD proxy
-Multisig is the owner of TokenController and the also the proxyOwner of TokenController proxy.
-Multisig is also the proxyOwner of its own proxy.
+This contract is the owner of TimeLockedController.sol. It turns every function that only the owner can access into a multisig function that requires 2/3 approvals.
+
+### Delegation Process
+
 
 ## Testing
 
 Initialize the registry submodule in the root directory:
-```bash
-git submodule init && git submodule update
-```
+
+- `git submodule init && git submodule update``
 
 To run the tests and generate a code coverage report:
-```bash
-npm install
-npm test
-```
 
-## Contract Structure
-
-    ├── modularERC20  
-    │   ├── AllowanceSheet         
-    │   ├── BalanceSheet        
-    │   ├── ModularBasicToken        
-    │   ├── ModularStandardToken        
-    │   ├── ModularBurnableToken        
-    │   ├── ModularMintableToken        
-    │   └── ModularPausableToken                
-    ├── Admin                 
-    │   ├── TokenController        
-    │   └── MultisigOwner               
-    ├── Proxy
-    │   ├── Proxy        
-    │   ├── UpgradeabilityProxy        
-    │   └── OwnedUpgradeabilityProxy               
-    ├── utilities
-    │   ├── FastPauseMints        
-    │   ├── FastPauseTrueUSD        
-    │   └── GlobalPause               
-    ├── ProxyStorage
-    ├── HasOwner
-    ├── BurnableTokenWithBounds
-    ├── CompliantToken
-    ├── RedeemableToken
-    ├── DepositToken
-    ├── GasRefundToken
-    ├── TrueUSD
-
+- `npm install`
+- `npm test`
 
 ## Other Information
 

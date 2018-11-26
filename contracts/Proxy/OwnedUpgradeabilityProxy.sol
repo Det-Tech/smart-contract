@@ -44,7 +44,7 @@ contract OwnedUpgradeabilityProxy is UpgradeabilityProxy {
     * @dev Throws if called by any account other than the pending owner.
     */
     modifier onlyPendingProxyOwner() {
-        require(msg.sender == pendingProxyOwner(), "only pending Proxy Owner");
+        require(msg.sender == pendingProxyOwner());
         _;
     }
 

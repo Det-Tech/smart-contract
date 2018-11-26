@@ -1,22 +1,22 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.21;
 
-import "../Admin/TokenController.sol";
+import "../Owners/TimeLockedController.sol";
 
 /*
 Allows for admins to quickly respond to critical emergencies
-After deploying FastPauseTrueUSD and configuring it with TokenController, admins
-can pause trueUSD by simply sending any amount of ether to this contract
+After deploying FastPauseTrueUSD and configuring it with TimeLockedController
+Can pause trueUSD by simply sending any amount of ether to this contract
 from the trueUsdPauser address
 */
 contract FastPauseTrueUSD {
     
-    TokenController public controllerContract;
+    TimeLockedController public controllerContract;
     address public trueUsdPauser;
     
     event FastTrueUSDPause(address sender);
 
     constructor(address _trueUsdPauser, address _controllerContract) public {
-        controllerContract = TokenController(_controllerContract);
+        controllerContract = TimeLockedController(_controllerContract);
         trueUsdPauser = _trueUsdPauser;
     }
     

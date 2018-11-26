@@ -2,9 +2,6 @@ pragma solidity ^0.4.23;
 
 import "./modularERC20/ModularPausableToken.sol";
 
-/**
- * @title Compliant Token
- */
 contract CompliantToken is ModularPausableToken {
     // In order to deposit USD and receive newly minted TrueUSD, or to burn TrueUSD to
     // redeem it for USD, users must first go through a KYC/AML check (which includes proving they
@@ -20,12 +17,7 @@ contract CompliantToken is ModularPausableToken {
 
     event WipeBlacklistedAccount(address indexed account, uint256 balance);
     event SetRegistry(address indexed registry);
-    
-    
-    /**
-    * @dev Point to the registry that contains all compliance related data
-    @param _registry The address of the registry instance
-    */
+
     function setRegistry(Registry _registry) public onlyOwner {
         registry = _registry;
         emit SetRegistry(registry);
@@ -36,9 +28,9 @@ contract CompliantToken is ModularPausableToken {
         return super.mint(_to, _value);
     }
 
-    function burnAllArgs(address _burner, uint256 _value) internal {
+    function burnAllArgs(address _burner, uint256 _value, string _note) internal {
         require(registry.hasAttribute1ButNotAttribute2(_burner, CAN_BURN, IS_BLACKLISTED), "_burner cannot burn");
-        super.burnAllArgs(_burner, _value);
+        super.burnAllArgs(_burner, _value, _note);
     }
 
     // A blacklisted address can't call transferFrom
@@ -60,5 +52,6 @@ contract CompliantToken is ModularPausableToken {
         balances.setBalance(_account, 0);
         totalSupply_ = totalSupply_.sub(oldValue);
         emit WipeBlacklistedAccount(_account, oldValue);
+        emit Transfer(_account, address(0), oldValue);
     }
 }

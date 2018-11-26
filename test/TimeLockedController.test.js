@@ -7,16 +7,16 @@ const Registry = artifacts.require("Registry")
 const TrueUSD = artifacts.require("TrueUSD")
 const BalanceSheet = artifacts.require("BalanceSheet")
 const AllowanceSheet = artifacts.require("AllowanceSheet")
-const TokenController = artifacts.require("TokenController")
+const TimeLockedController = artifacts.require("TimeLockedController")
 const TrueUSDMock = artifacts.require("TrueUSDMock")
 const ForceEther = artifacts.require("ForceEther")
 const FastPauseMints = artifacts.require("FastPauseMints")
 const FastPauseTrueUSD = artifacts.require("FastPauseTrueUSD")
 const GlobalPause = artifacts.require("GlobalPause")
 
-contract('TokenController', function (accounts) {
+contract('TimeLockedController', function (accounts) {
 
-    describe('--TokenController Tests--', function () {
+    describe('--TimeLockedController Tests--', function () {
         const [_, owner, oneHundred, otherAddress, mintKey, pauseKey, pauseKey2, ratifier1, ratifier2, ratifier3, redemptionAdmin] = accounts
 
         beforeEach(async function () {
@@ -24,7 +24,7 @@ contract('TokenController', function (accounts) {
             this.token = await TrueUSDMock.new(oneHundred, 100*10**18, { from: owner })
             this.globalPause = await GlobalPause.new({ from: owner })
             await this.token.setGlobalPause(this.globalPause.address, { from: owner })    
-            this.controller = await TokenController.new({ from: owner })
+            this.controller = await TimeLockedController.new({ from: owner })
             this.fastPauseMints = await FastPauseMints.new(pauseKey2, this.controller.address, { from: owner })
             await this.controller.initialize({ from: owner })
             await this.controller.setRegistry(this.registry.address, { from: owner })
@@ -483,6 +483,19 @@ contract('TokenController', function (accounts) {
             })
         })
 
+        describe('changeStaker', function () {
+            it('sets staker', async function () {
+                await this.controller.changeStaker(oneHundred, { from: owner })
+
+                const staker = await this.token.staker()
+                assert.equal(staker, oneHundred)
+            })
+
+            it('cannot be called by non-owner', async function () {
+                await assertRevert(this.controller.changeStaker(oneHundred, { from: otherAddress }))
+            })
+        })
+
 
         describe('pause trueUSD and wipe accounts', function(){
             beforeEach(async function(){
@@ -490,13 +503,13 @@ contract('TokenController', function (accounts) {
                 await this.controller.setTrueUsdFastPause(this.fastPauseTrueUSD.address, { from: owner })
             })
 
-            it('TokenController can pause TrueUSD transfers', async function(){
+            it('timeLockControler can pause TrueUSD transfers', async function(){
                 await this.token.transfer(mintKey, 10*10**18, { from: oneHundred })
                 await this.controller.pauseTrueUSD({ from: owner })
                 await assertRevert(this.token.transfer(mintKey, 40*10**18, { from: oneHundred }))
             })
 
-            it('TokenController can unpause TrueUSD transfers', async function(){
+            it('timeLockControler can unpause TrueUSD transfers', async function(){
                 await this.controller.pauseTrueUSD({ from: owner })
                 await assertRevert(this.token.transfer(mintKey, 40*10**18, { from: oneHundred }))
                 await this.controller.unpauseTrueUSD({ from: owner })
@@ -517,7 +530,7 @@ contract('TokenController', function (accounts) {
                 await assertRevert(this.fastPauseTrueUSD.sendTransaction({from: pauseKey2, gas: 600000, value: 10}));                  
             })
 
-            it('TokenController can wipe blacklisted account', async function(){
+            it('timeLockControler can wipe blacklisted account', async function(){
                 await this.token.transfer(this.token.address, 40*10**18, { from: oneHundred })
                 await assertBalance(this.token, this.token.address, 40000000000000000000)
                 await this.registry.setAttribute(this.token.address, "isBlacklisted", 1, "notes", { from: owner })
@@ -525,7 +538,7 @@ contract('TokenController', function (accounts) {
                 await assertBalance(this.token, this.token.address, 0)
             })
 
-            it('tokenController can set GlobalPause', async function(){
+            it('timeLockController can set GlobalPause', async function(){
                 this.globalPause = await GlobalPause.new({ from: owner })
                 await this.globalPause.pauseAllTokens(true, "Unsupported fork", { from: owner })
                 await this.controller.setGlobalPause(this.globalPause.address, { from: owner })
@@ -635,5 +648,32 @@ contract('TokenController', function (accounts) {
                 await assertBalance(this.token, owner, 40*10**18)
             })
         })
+
+        describe('Staking Fees', function () {
+            it('changes fees', async function () {
+                await this.controller.changeStakingFees(1, 2, 3, 4, 5, 6, 7, 8, { from: owner })
+                const transferFeeNumerator = await this.token.transferFeeNumerator()
+                assert.equal(transferFeeNumerator, 1)
+                const transferFeeDenominator = await this.token.transferFeeDenominator()
+                assert.equal(transferFeeDenominator, 2)
+                const mintFeeNumerator = await this.token.mintFeeNumerator()
+                assert.equal(mintFeeNumerator, 3)
+                const mintFeeDenominator = await this.token.mintFeeDenominator()
+                assert.equal(mintFeeDenominator, 4)
+                const mintFeeFlat = await this.token.mintFeeFlat()
+                assert.equal(mintFeeFlat, 5)
+                const burnFeeNumerator = await this.token.burnFeeNumerator()
+                assert.equal(burnFeeNumerator, 6)
+                const burnFeeDenominator = await this.token.burnFeeDenominator()
+                assert.equal(burnFeeDenominator, 7)
+                const burnFeeFlat = await this.token.burnFeeFlat()
+                assert.equal(burnFeeFlat, 8)
+            })
+
+            it('cannot be called by non-owner', async function () {
+                await assertRevert(this.controller.changeStakingFees(1, 2, 3, 4, 5, 6, 7, 8, { from: otherAddress }))
+            })
+        })
     })
+
 })
