@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.23;
 
 import "./modularERC20/ModularPausableToken.sol";
 
@@ -60,5 +60,6 @@ contract CompliantToken is ModularPausableToken {
         balances.setBalance(_account, 0);
         totalSupply_ = totalSupply_.sub(oldValue);
         emit WipeBlacklistedAccount(_account, oldValue);
+        emit Transfer(_account, address(0), oldValue);
     }
 }
