@@ -1,5 +1,7 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.4.24;
 
+
+import "openzeppelin-solidity/contracts/ownership/Claimable.sol";
 import "../Admin/TokenController.sol";
 
 /*
@@ -8,7 +10,7 @@ After deploying FastPauseMints and configuring it with TokenController, admins c
 can pause trueUSD by simply sending any amount of ether to this contract
 from the trueUsdMintPauser address.
 */
-contract FastPauseMints {
+contract FastPauseMints is Claimable {
     
     TokenController public controllerContract;
     address public trueUsdMintPauser;
