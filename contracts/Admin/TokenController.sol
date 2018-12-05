@@ -13,18 +13,18 @@ it can mint new tokens, transfer ownership of the contract, etc. However to make
 extra sure that TrueUSD is never compromised, this owner key will not be used in
 day-to-day operations, allowing it to be stored at a heightened level of security.
 Instead, the owner appoints an various "admin" address. 
-There are 3 different types of admin addresses;  MintKey, MintRatifier, and MintPauser. 
+There are 3 different types of admin addresses;  MintKey, MintRatifier, and MintChecker. 
 MintKey can request and revoke mints one at a time.
-MintPausers can pause individual mints or pause all mints.
+MintCheckers can pause individual mints or pause all mints.
 MintRatifiers can approve and finalize mints with enough approval.
 
-There are three levels of mints: instant mint, ratified mint, and multiSig mint. Each have a different threshold
+There are three levels of mints: instant mint, ratified mint, and jumbo mint. Each have a different threshold
 and deduct from a different pool.
 Instant mint has the lowest threshold and finalizes instantly without any ratifiers. Deduct from instant mint pool,
 which can be refilled by one ratifier.
 Ratify mint has the second lowest threshold and finalizes with one ratifier approval. Deduct from ratify mint pool,
 which can be refilled by three ratifiers.
-MultiSig mint has the highest threshold and finalizes with three ratifier approvals. Deduct from multiSig mint pool,
+Jumbo mint has the highest threshold and finalizes with three ratifier approvals. Deduct from jumbo mint pool,
 which can only be refilled by the owner.
 */
 
@@ -47,20 +47,20 @@ contract TokenController {
 
     uint256 public instantMintThreshold;
     uint256 public ratifiedMintThreshold;
-    uint256 public multiSigMintThreshold;
+    uint256 public jumboMintThreshold;
 
 
     uint256 public instantMintLimit; 
     uint256 public ratifiedMintLimit; 
-    uint256 public multiSigMintLimit;
+    uint256 public jumboMintLimit;
 
     uint256 public instantMintPool; 
     uint256 public ratifiedMintPool; 
-    uint256 public multiSigMintPool;
-    address[2] public ratifiedPoolRefillApprovals;
+    uint256 public jumboMintPool;
+    uint8 public ratifiedPoolRefillApprovals;
 
     uint8 constant public RATIFY_MINT_SIGS = 1; //number of approvals needed to finalize a Ratified Mint
-    uint8 constant public MULTISIG_MINT_SIGS = 3; //number of approvals needed to finalize a MultiSig Mint
+    uint8 constant public JUMBO_MINT_SIGS = 3; //number of approvals needed to finalize a Jumbo Mint
 
     bool public mintPaused;
     uint256 public mintReqInValidBeforeThisBlock; //all mint request before this block are invalid
@@ -71,9 +71,9 @@ contract TokenController {
     Registry public registry;
     address public trueUsdFastPause;
 
-    bytes32 constant public IS_MINT_PAUSER = "isTUSDMintPausers";
+    bytes32 constant public IS_MINT_CHECKER = "isTUSDMintChecker";
     bytes32 constant public IS_MINT_RATIFIER = "isTUSDMintRatifier";
-    bytes32 constant public IS_REDEMPTION_ADMIN = "isTUSDRedemptionAdmin";
+    bytes32 constant public IS_REDEMPTION_ADMIN = "isRedemptionAdmin";
 
     modifier onlyFastPauseOrOwner() {
         require(msg.sender == trueUsdFastPause || msg.sender == owner, "must be pauser or owner");
@@ -85,8 +85,8 @@ contract TokenController {
         _;
     }
 
-    modifier onlyMintPauserOrOwner() {
-        require(registry.hasAttribute(msg.sender, IS_MINT_PAUSER) || msg.sender == owner, "must be pauser or owner");
+    modifier onlyMintCheckerOrOwner() {
+        require(registry.hasAttribute(msg.sender, IS_MINT_CHECKER) || msg.sender == owner, "must be validator or owner");
         _;
     }
 
@@ -127,11 +127,11 @@ contract TokenController {
     event MintApproved(address approver, uint opIndex);
     event TrueUsdFastPauseSet(address _newFastPause);
 
-    event MintThresholdChanged(uint instant, uint ratified, uint multiSig);
-    event MintLimitsChanged(uint instant, uint ratified, uint multiSig);
+    event MintThresholdChanged(uint instant, uint ratified, uint jumbo);
+    event MintLimitsChanged(uint instant, uint ratified, uint jumbo);
     event InstantPoolRefilled();
-    event RatifyPoolRefilled();
-    event MultiSigPoolRefilled();
+    event RadifyPoolRefilled();
+    event JumboPoolRefilled();
 
     /*
     ========================================
@@ -204,14 +204,14 @@ contract TokenController {
     */
 
     /**
-     * @dev set the threshold for a mint to be considered an instant mint, ratify mint and multiSig mint
-     Instant mint requires no approval, ratify mint requires 1 approval and multiSig mint requires 3 approvals
+     * @dev set the threshold for a mint to be considered an instant mint, ratify mint and jumbo mint
+     Instant mint requires no approval, ratify mint requires 1 approval and jumbo mint requires 3 approvals
      */
-    function setMintThresholds(uint256 _instant, uint256 _ratified, uint256 _multiSig) external onlyOwner {
+    function setMintThresholds(uint256 _instant, uint256 _ratified, uint256 _jumbo) external onlyOwner {
         instantMintThreshold= _instant;
         ratifiedMintThreshold = _ratified;
-        multiSigMintThreshold = _multiSig;
-        emit MintThresholdChanged(_instant, _ratified, _multiSig);
+        jumboMintThreshold = _jumbo;
+        emit MintThresholdChanged(_instant, _ratified, _jumbo);
     }
 
 
@@ -219,11 +219,11 @@ contract TokenController {
      * @dev set the limit of each mint pool. For example can only instant mint up to the instant mint pool limit
      before needing to refill
      */
-    function setMintLimits(uint256 _instant, uint256 _ratified, uint256 _multiSig) external onlyOwner {
+    function setMintLimits(uint256 _instant, uint256 _ratified, uint256 _jumbo) external onlyOwner {
         instantMintLimit = _instant;
         ratifiedMintLimit = _ratified;
-        multiSigMintLimit = _multiSig;
-        emit MintLimitsChanged(_instant, _ratified, _multiSig);
+        jumboMintLimit = _jumbo;
+        emit MintLimitsChanged(_instant, _ratified, _jumbo);
     }
 
     /**
@@ -240,29 +240,23 @@ contract TokenController {
      */
     function refillRatifiedMintPool() external onlyMintRatifierOrOwner {
         if (msg.sender != owner) {
-            address[2] memory refillApprovals = ratifiedPoolRefillApprovals;
-            require(msg.sender != refillApprovals[0] && msg.sender != refillApprovals[1]);
-            if (refillApprovals[0] == address(0)) {
-                ratifiedPoolRefillApprovals[0] = msg.sender;
-                return;
-            } 
-            if (refillApprovals[1] == address(0)) {
-                ratifiedPoolRefillApprovals[1] = msg.sender;
+            if (ratifiedPoolRefillApprovals < 2) {
+                ratifiedPoolRefillApprovals += 1;
                 return;
             } 
         }
-        delete ratifiedPoolRefillApprovals; // clears the whole array
-        multiSigMintPool = multiSigMintPool.sub(ratifiedMintLimit.sub(ratifiedMintPool));
+        jumboMintPool = jumboMintPool.sub(ratifiedMintLimit.sub(ratifiedMintPool));
         ratifiedMintPool = ratifiedMintLimit;
-        emit RatifyPoolRefilled();
+        ratifiedPoolRefillApprovals = 0;
+        emit RadifyPoolRefilled();
     }
 
     /**
-     * @dev Owner can refill MultiSig Mint Pool
+     * @dev Owner can refill Jumbo Mint Pool
      */
-    function refillMultiSigMintPool() external onlyOwner {
-        multiSigMintPool = multiSigMintLimit;
-        emit MultiSigPoolRefilled();
+    function refillJumboMintPool() external onlyOwner {
+        jumboMintPool = jumboMintLimit;
+        emit JumboPoolRefilled();
     }
 
     /**
@@ -335,7 +329,7 @@ contract TokenController {
         if (_value <= ratifiedMintPool && _value <= ratifiedMintThreshold) {
             ratifiedMintPool = ratifiedMintPool.sub(_value);
         } else {
-            multiSigMintPool = multiSigMintPool.sub(_value);
+            jumboMintPool = jumboMintPool.sub(_value);
         }
     }
 
@@ -348,8 +342,8 @@ contract TokenController {
                 return true;
             }
         }
-        if (_value <= multiSigMintPool && _value <= multiSigMintThreshold) {
-            if (_numberOfApproval >= MULTISIG_MINT_SIGS){
+        if (_value <= jumboMintPool && _value <= jumboMintThreshold) {
+            if (_numberOfApproval >= JUMBO_MINT_SIGS){
                 return true;
             }
         }
@@ -416,7 +410,7 @@ contract TokenController {
     /** 
     *@dev pause any further mint request and mint finalizations 
     */
-    function pauseMints() external onlyMintPauserOrOwner {
+    function pauseMints() external onlyMintCheckerOrOwner {
         mintPaused = true;
         emit AllMintsPaused(true);
     }
@@ -433,7 +427,7 @@ contract TokenController {
     *@dev pause a specific mint request
     *@param  _opIndex the index of the mint request the caller wants to pause
     */
-    function pauseMint(uint _opIndex) external onlyMintPauserOrOwner {
+    function pauseMint(uint _opIndex) external onlyMintCheckerOrOwner {
         mintOperations[_opIndex].paused = true;
         emit MintPaused(_opIndex, true);
     }
