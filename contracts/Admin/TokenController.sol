@@ -472,13 +472,9 @@ contract TokenController {
         emit SetTrueUSD(_newContract);
     }
 
-    function initializeTrueUSD() external onlyOwner {
-        trueUSD.initialize();
+    function initializeTrueUSD(uint256 _totalSupply) external onlyOwner {
+        trueUSD.initialize(_totalSupply);
         emit TrueUsdInitialized();
-    }
-
-    function setTusdTotalSupply(uint _totalSupply) external onlyOwner {
-        trueUSD.setTotalSupply(_totalSupply);
     }
 
     /** 
