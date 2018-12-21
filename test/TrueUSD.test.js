@@ -1,6 +1,9 @@
 import assertRevert from './helpers/assertRevert'
 import expectThrow from './helpers/expectThrow'
 import burnableTokenWithBoundsTests from './BurnableTokenWithBounds'
+import basicTokenTests from './token/BasicToken';
+import standardTokenTests from './token/StandardToken';
+import burnableTokenTests from './token/BurnableToken';
 import compliantTokenTests from './CompliantToken';
 const Registry = artifacts.require("Registry")
 const TrueUSD = artifacts.require("TrueUSD")
@@ -21,7 +24,7 @@ contract('TrueUSD', function (accounts) {
             this.balances = await BalanceSheet.new({ from: owner })
             this.allowances = await AllowanceSheet.new({ from: owner })
             this.token = await TrueUSD.new({ from: owner })
-            await this.token.initialize(0, { from: owner })
+            await this.token.initialize({ from: owner })
             this.globalPause = await GlobalPause.new({ from: owner })
             await this.token.setGlobalPause(this.globalPause.address, { from: owner })    
             await this.token.setRegistry(this.registry.address, { from: owner })
@@ -32,6 +35,21 @@ contract('TrueUSD', function (accounts) {
             await this.registry.setAttribute(oneHundred, "hasPassedKYC/AML", 1, notes, { from: owner })
             await this.token.mint(oneHundred, 100*10**18, { from: owner })
             await this.registry.setAttribute(oneHundred, "hasPassedKYC/AML", 0, notes, { from: owner })
+        })
+
+        it ('owner can set totalsupply', async function(){
+            await this.token.setTotalSupply(100*10**18,{ from: owner })
+            const totalSupply = Number(await this.token.totalSupply())
+            assert.equal(100*10**18, totalSupply)
+        })
+
+        it('totalsupply cannot be set when it is not zero', async function(){
+            await this.token.setTotalSupply(100*10**18,{ from: owner })
+            await assertRevert(this.token.setTotalSupply(100*10**18,{ from: owner }))
+        })
+
+        it('only owner can set totalSupply', async function(){
+            await assertRevert(this.token.setTotalSupply(100*10**18,{ from: oneHundred }))
         })
 
         it('trueUSD does not accept ether', async function(){
@@ -51,7 +69,7 @@ contract('TrueUSD', function (accounts) {
                     await this.registry.setAttribute(oneHundred, "canBurn", 1, notes, { from: owner })
                 })
 
-                burnableTokenWithBoundsTests([owner, oneHundred, anotherAccount], false)
+                burnableTokenWithBoundsTests([owner, oneHundred, anotherAccount], true)
             })
 
             describe('user is not on burn whitelist', function () {
@@ -78,7 +96,7 @@ contract('TrueUSD', function (accounts) {
                 await this.token.setBurnBounds(0, "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", { from: owner })
             })
 
-            compliantTokenTests([owner, oneHundred, anotherAccount], false)
+            compliantTokenTests([owner, oneHundred, anotherAccount], true)
         })
 
         it("can change name", async function () {
