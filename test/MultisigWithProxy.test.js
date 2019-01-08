@@ -9,6 +9,7 @@ const BalanceSheet = artifacts.require("BalanceSheet")
 const AllowanceSheet = artifacts.require("AllowanceSheet")
 const TokenController = artifacts.require("TokenController")
 const MultisigOwner = artifacts.require("MultisigOwner")
+const GlobalPause = artifacts.require("GlobalPause")
 const Proxy = artifacts.require("OwnedUpgradeabilityProxy")
 
 contract('MultisigOwner With Proxy', function (accounts) {
@@ -27,6 +28,7 @@ contract('MultisigOwner With Proxy', function (accounts) {
         await this.multisigOwner.msClaimProxyOwnership({from: owner2})
 
         this.registry = await Registry.new({ from: owner1 })
+        this.globalPause = await GlobalPause.new({ from: owner1 })
 
         this.controllerImplementation = await TokenController.new({ from: owner1 })
         this.controllerProxy = await Proxy.new({ from: owner1 })
@@ -65,6 +67,8 @@ contract('MultisigOwner With Proxy', function (accounts) {
         await this.multisigOwner.transferMintKey(mintKey, { from: owner2 })
         await this.multisigOwner.setRegistry(this.registry.address, { from: owner1 })
         await this.multisigOwner.setRegistry(this.registry.address, { from: owner2 })
+        await this.multisigOwner.setGlobalPause(this.globalPause.address, { from: owner1 })
+        await this.multisigOwner.setGlobalPause(this.globalPause.address, { from: owner2 })
         await this.multisigOwner.setTusdRegistry(this.registry.address, { from: owner1 })
         await this.multisigOwner.setTusdRegistry(this.registry.address, { from: owner2 })
         await this.registry.setAttribute(oneHundred, "hasPassedKYC/AML", 1, "notes", { from: owner1 })
