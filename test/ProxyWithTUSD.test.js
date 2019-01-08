@@ -6,12 +6,11 @@ import standardTokenTests from './token/StandardToken';
 import burnableTokenTests from './token/BurnableToken';
 import compliantTokenTests from './CompliantToken';
 const Registry = artifacts.require("Registry")
-const TrueUSD = artifacts.require("TrueUSDMock")
+const TrueUSD = artifacts.require("TrueUSD")
 const TrueUSDMock = artifacts.require("TrueUSDMock")
 const BalanceSheet = artifacts.require("BalanceSheet")
 const AllowanceSheet = artifacts.require("AllowanceSheet")
 const ForceEther = artifacts.require("ForceEther")
-const GlobalPause = artifacts.require("GlobalPause")
 const TusdProxy = artifacts.require("OwnedUpgradeabilityProxy")
 
 
@@ -23,8 +22,7 @@ contract('Proxy', function (accounts) {
         beforeEach(async function () {
             this.registry = await Registry.new({ from: owner })
             this.proxy = await TusdProxy.new({ from: owner })
-            this.implementation = await TrueUSD.new(owner, 0, { from: owner })
-            this.globalPause = await GlobalPause.new({ from: owner })
+            this.implementation = await TrueUSD.new({ from: owner })
             this.token = await TrueUSD.at(this.proxy.address)
             this.balanceSheet = await BalanceSheet.new({ from: owner })
             this.allowanceSheet = await AllowanceSheet.new({ from: owner })
@@ -55,10 +53,6 @@ contract('Proxy', function (accounts) {
                 await this.token.initialize({from: owner})
             })
 
-            it ('set globalPause contract', async function(){
-                await this.token.setGlobalPause(this.globalPause.address, { from: owner }) 
-            })
-
             it ('set storage contract', async function(){
                 await this.token.setBalanceSheet(this.balanceSheet.address, { from: owner })
                 await this.token.setAllowanceSheet(this.allowanceSheet.address, { from: owner })   
@@ -71,7 +65,6 @@ contract('Proxy', function (accounts) {
         describe('---Tusd token functions---', function(){
             beforeEach(async function () {
                 await this.token.initialize({from: owner})
-                await this.token.setGlobalPause(this.globalPause.address, { from: owner }) 
                 await this.token.setBalanceSheet(this.balanceSheet.address, { from: owner })
                 await this.token.setAllowanceSheet(this.allowanceSheet.address, { from: owner })   
                 await this.token.setRegistry(this.registry.address, { from: owner }) 

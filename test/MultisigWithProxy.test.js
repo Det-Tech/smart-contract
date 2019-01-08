@@ -4,12 +4,11 @@ import assertBalance from './helpers/assertBalance'
 import increaseTime, { duration } from './helpers/increaseTime'
 import { throws } from 'assert'
 const Registry = artifacts.require("Registry")
-const TrueUSD = artifacts.require("TrueUSDMock")
+const TrueUSD = artifacts.require("TrueUSD")
 const BalanceSheet = artifacts.require("BalanceSheet")
 const AllowanceSheet = artifacts.require("AllowanceSheet")
 const TokenController = artifacts.require("TokenController")
 const MultisigOwner = artifacts.require("MultisigOwner")
-const GlobalPause = artifacts.require("GlobalPause")
 const Proxy = artifacts.require("OwnedUpgradeabilityProxy")
 
 contract('MultisigOwner With Proxy', function (accounts) {
@@ -28,7 +27,6 @@ contract('MultisigOwner With Proxy', function (accounts) {
         await this.multisigOwner.msClaimProxyOwnership({from: owner2})
 
         this.registry = await Registry.new({ from: owner1 })
-        this.globalPause = await GlobalPause.new({ from: owner1 })
 
         this.controllerImplementation = await TokenController.new({ from: owner1 })
         this.controllerProxy = await Proxy.new({ from: owner1 })
@@ -46,7 +44,7 @@ contract('MultisigOwner With Proxy', function (accounts) {
         await this.multisigOwner.initialize({from : owner1 })
         await this.multisigOwner.initialize({from : owner2 })
         this.tokenProxy = await Proxy.new({ from: owner1 })
-        this.tokenImplementation = await TrueUSD.new(owner1, 0, { from: owner1 })
+        this.tokenImplementation = await TrueUSD.new({ from: owner1 })
         this.token = await TrueUSD.at(this.tokenProxy.address)
 
         await this.multisigOwner.setTrueUSD(this.token.address, {from : owner1 })
@@ -67,8 +65,6 @@ contract('MultisigOwner With Proxy', function (accounts) {
         await this.multisigOwner.transferMintKey(mintKey, { from: owner2 })
         await this.multisigOwner.setRegistry(this.registry.address, { from: owner1 })
         await this.multisigOwner.setRegistry(this.registry.address, { from: owner2 })
-        await this.multisigOwner.setGlobalPause(this.globalPause.address, { from: owner1 })
-        await this.multisigOwner.setGlobalPause(this.globalPause.address, { from: owner2 })
         await this.multisigOwner.setTusdRegistry(this.registry.address, { from: owner1 })
         await this.multisigOwner.setTusdRegistry(this.registry.address, { from: owner2 })
         await this.registry.setAttribute(oneHundred, "hasPassedKYC/AML", 1, "notes", { from: owner1 })

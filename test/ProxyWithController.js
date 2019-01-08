@@ -1,11 +1,10 @@
 import assertRevert from './helpers/assertRevert'
 import expectThrow from './helpers/expectThrow'
 const Registry = artifacts.require("Registry")
-const TrueUSD = artifacts.require("TrueUSDMock")
+const TrueUSD = artifacts.require("TrueUSD")
 const BalanceSheet = artifacts.require("BalanceSheet")
 const AllowanceSheet = artifacts.require("AllowanceSheet")
 const ForceEther = artifacts.require("ForceEther")
-const GlobalPause = artifacts.require("GlobalPause")
 const Proxy = artifacts.require("OwnedUpgradeabilityProxy")
 const FastPauseTrueUSD = artifacts.require("FastPauseTrueUSD")
 const TokenController = artifacts.require("TokenController")
@@ -18,8 +17,7 @@ contract('--Proxy With Controller--', function (accounts) {
         beforeEach(async function () {
             this.registry = await Registry.new({ from: owner })
             this.tokenProxy = await Proxy.new({ from: owner })
-            this.tusdImplementation = await TrueUSD.new(owner, 0, { from: owner })
-            this.globalPause = await GlobalPause.new({ from: owner })
+            this.tusdImplementation = await TrueUSD.new({ from: owner })
             this.token = await TrueUSD.at(this.tokenProxy.address)
             this.balanceSheet = await BalanceSheet.new({ from: owner })
             this.allowanceSheet = await AllowanceSheet.new({ from: owner })
@@ -29,7 +27,6 @@ contract('--Proxy With Controller--', function (accounts) {
             await this.registry.setAttribute(oneHundred, "hasPassedKYC/AML", 1, "notes", { from: owner })
             await this.registry.setAttribute(oneHundred, "canBurn", 1, "notes", { from: owner })
             await this.token.initialize({from: owner})
-            await this.token.setGlobalPause(this.globalPause.address, { from: owner }) 
             await this.token.setBalanceSheet(this.balanceSheet.address, { from: owner })
             await this.token.setAllowanceSheet(this.allowanceSheet.address, { from: owner })   
             this.controllerImplementation = await TokenController.new({ from: owner })

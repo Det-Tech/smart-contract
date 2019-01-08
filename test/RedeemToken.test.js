@@ -3,11 +3,10 @@ import expectThrow from './helpers/expectThrow'
 import assertBalance from './helpers/assertBalance'
 
 const Registry = artifacts.require("Registry")
-const TrueUSD = artifacts.require("TrueUSDMock")
+const TrueUSD = artifacts.require("TrueUSD")
 const BalanceSheet = artifacts.require("BalanceSheet")
 const AllowanceSheet = artifacts.require("AllowanceSheet")
 const ForceEther = artifacts.require("ForceEther")
-const GlobalPause = artifacts.require("GlobalPause")
 
 contract('RedeemToken', function (accounts) {
     const [_, owner, oneHundred, anotherAccount, cannotBurn] = accounts
@@ -19,9 +18,8 @@ contract('RedeemToken', function (accounts) {
             this.registry = await Registry.new({ from: owner })
             this.balances = await BalanceSheet.new({ from: owner })
             this.allowances = await AllowanceSheet.new({ from: owner })
-            this.token = await TrueUSD.new(owner, 0, { from: owner })
-            this.globalPause = await GlobalPause.new({ from: owner })
-            await this.token.setGlobalPause(this.globalPause.address, { from: owner })    
+            this.token = await TrueUSD.new({ from: owner })
+            await this.token.initialize({ from: owner })
             await this.token.setRegistry(this.registry.address, { from: owner })
             await this.balances.transferOwnership(this.token.address, { from: owner })
             await this.allowances.transferOwnership(this.token.address, { from: owner })
