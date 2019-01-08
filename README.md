@@ -90,7 +90,8 @@ npm test
     │   ├── ModularBasicToken        
     │   ├── ModularStandardToken        
     │   ├── ModularBurnableToken        
-    │   └── ModularMintableToken                
+    │   ├── ModularMintableToken        
+    │   └── ModularPausableToken                
     ├── Admin                 
     │   ├── TokenController        
     │   └── MultisigOwner               
@@ -100,7 +101,8 @@ npm test
     │   └── OwnedUpgradeabilityProxy               
     ├── utilities
     │   ├── FastPauseMints        
-    │   └── FastPauseTrueUSD               
+    │   ├── FastPauseTrueUSD        
+    │   └── GlobalPause               
     ├── ProxyStorage
     ├── HasOwner
     ├── BurnableTokenWithBounds

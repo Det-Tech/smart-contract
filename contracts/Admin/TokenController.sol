@@ -75,8 +75,6 @@ contract TokenController {
     bytes32 constant public IS_MINT_RATIFIER = "isTUSDMintRatifier";
     bytes32 constant public IS_REDEMPTION_ADMIN = "isTUSDRedemptionAdmin";
 
-    address constant public PAUSED_IMPLEMENTATION = address(1); // ***To be changed the paused version of TrueUSD in Production
-
     modifier onlyFastPauseOrOwner() {
         require(msg.sender == trueUsdFastPause || msg.sender == owner, "must be pauser or owner");
         _;
@@ -559,6 +557,14 @@ contract TokenController {
     }
 
     /** 
+    *@dev set new contract to which tokens look to to see if it's on the supported fork
+    *@param _newGlobalPause address of the new contract
+    */
+    function setGlobalPause(address _newGlobalPause) external onlyOwner {
+        trueUSD.setGlobalPause(_newGlobalPause);
+    }
+
+    /** 
     *@dev set new contract to which specified address can send eth to to quickly pause trueUSD
     *@param _newFastPause address of the new contract
     */
@@ -571,7 +577,14 @@ contract TokenController {
     *@dev pause all pausable actions on TrueUSD, mints/burn/transfer/approve
     */
     function pauseTrueUSD() external onlyFastPauseOrOwner {
-        OwnedUpgradeabilityProxy(trueUSD).upgradeTo(PAUSED_IMPLEMENTATION);
+        trueUSD.pause();
+    }
+
+    /** 
+    *@dev unpause all pausable actions on TrueUSD, mints/burn/transfer/approve
+    */
+    function unpauseTrueUSD() external onlyOwner {
+        trueUSD.unpause();
     }
     
     /** 

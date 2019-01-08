@@ -1,13 +1,11 @@
 pragma solidity ^0.4.23;
 
-import "./modularERC20/ModularMintableToken.sol";
+import "./modularERC20/ModularPausableToken.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./BurnableTokenWithBounds.sol";
-import "./CompliantToken.sol";
+import "./CompliantDepositTokenWithHook.sol";
 import "./RedeemableToken.sol";
-import "./DepositToken.sol";
 import "./GasRefundToken.sol";
-import "./TokenWithHook.sol";
 import "./DelegateERC20.sol";
 
 /** @title TrueUSD
@@ -15,13 +13,11 @@ import "./DelegateERC20.sol";
 * inherited - see the documentation on the corresponding contracts.
 */
 contract TrueUSD is 
-ModularMintableToken, 
+ModularPausableToken, 
 BurnableTokenWithBounds, 
-CompliantToken,
 RedeemableToken,
-TokenWithHook,
 DelegateERC20,
-DepositToken,
+CompliantDepositTokenWithHook,
 GasRefundToken {
     using SafeMath for *;
 
@@ -30,12 +26,12 @@ GasRefundToken {
 
     event ChangeTokenName(string newName, string newSymbol);
 
-    function decimals() public returns (uint8) {
-        return DECIMALS;
+    function decimals() public pure returns (uint8) {
+      return DECIMALS;
     }
 
-    function rounding() public returns (uint8) {
-        return ROUNDING;
+    function rounding() public pure returns (uint8) {
+      return ROUNDING;
     }
 
     function changeTokenName(string _name, string _symbol) external onlyOwner {
