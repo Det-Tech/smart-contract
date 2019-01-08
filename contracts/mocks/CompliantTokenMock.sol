@@ -1,8 +1,8 @@
 pragma solidity ^0.4.23;
 
-import "../CompliantDepositTokenWithHook.sol";
+import "../CompliantToken.sol";
 
-contract CompliantTokenMock is CompliantDepositTokenWithHook {
+contract CompliantTokenMock is CompliantToken {
     constructor(address initialAccount, uint256 initialBalance) public {
         balances = new BalanceSheet();
         allowances = new AllowanceSheet();
