@@ -5,6 +5,7 @@ const Registry = artifacts.require("Registry")
 const TrueUSDMock = artifacts.require("TrueUSDMock")
 const BalanceSheet = artifacts.require("BalanceSheet")
 const AllowanceSheet = artifacts.require("AllowanceSheet")
+const GlobalPause = artifacts.require("GlobalPause")
 const Proxy = artifacts.require("OwnedUpgradeabilityProxy")
 const TokenController = artifacts.require("TokenController")
 
@@ -14,6 +15,7 @@ contract('--Full upgrade process --', function (accounts) {
     describe('--Set up proxy--', function () {
         beforeEach(async function () {
             this.registry = await Registry.new({ from: owner })
+            this.globalPause = await GlobalPause.new({ from: owner })
             this.tokenProxy = await Proxy.new({ from: owner })
             this.tokenImplementation = await TrueUSDMock.new(owner, 0, { from: owner })
             this.token = await TrueUSDMock.at(this.tokenProxy.address)
@@ -47,6 +49,7 @@ contract('--Full upgrade process --', function (accounts) {
             this.allowanceSheet = await AllowanceSheet.new({ from: owner })
             await this.balanceSheet.transferOwnership(this.token.address,{ from: owner })
             await this.allowanceSheet.transferOwnership(this.token.address,{ from: owner })
+            await this.controller.setGlobalPause(this.globalPause.address, { from: owner }) 
             await this.controller.claimStorageForProxy(this.token.address, 
                                                        this.balanceSheet.address,
                                                        this.allowanceSheet.address, 
@@ -71,6 +74,7 @@ contract('--Full upgrade process --', function (accounts) {
             await this.onChainController.transferChild(this.balanceSheet, this.token.address, { from: owner })
 
             await this.controller.claimStorageForProxy(this.token.address,this.balanceSheet, this.allowanceSheet, { from: owner })
+            await this.controller.setGlobalPause(this.globalPause.address, { from: owner }) 
             
             await this.controller.setTusdRegistry(this.registry.address, { from: owner })
             await assertBalance(this.token, oneHundred, 1000* 10 ^ 18)
