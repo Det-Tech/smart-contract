@@ -13,7 +13,7 @@ function hasRegistryTests([owner, oneHundred, anotherAccount]) {
             it('sets the registry', async function () {
                 await this.token.setRegistry(registry2.address, { from: owner })
 
-                let registry = await this.token.registry.call()
+                let registry = await this.token.registry()
                 assert.equal(registry, registry2.address)
             })
 

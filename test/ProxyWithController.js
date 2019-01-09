@@ -4,7 +4,10 @@ const Registry = artifacts.require("Registry")
 const TrueUSD = artifacts.require("TrueUSDMock")
 const BalanceSheet = artifacts.require("BalanceSheet")
 const AllowanceSheet = artifacts.require("AllowanceSheet")
+const ForceEther = artifacts.require("ForceEther")
+const GlobalPause = artifacts.require("GlobalPause")
 const Proxy = artifacts.require("OwnedUpgradeabilityProxy")
+const FastPauseTrueUSD = artifacts.require("FastPauseTrueUSD")
 const TokenController = artifacts.require("TokenController")
 
 contract('--Proxy With Controller--', function (accounts) {
@@ -16,6 +19,7 @@ contract('--Proxy With Controller--', function (accounts) {
             this.registry = await Registry.new({ from: owner })
             this.tokenProxy = await Proxy.new({ from: owner })
             this.tusdImplementation = await TrueUSD.new(owner, 0, { from: owner })
+            this.globalPause = await GlobalPause.new({ from: owner })
             this.token = await TrueUSD.at(this.tokenProxy.address)
             this.balanceSheet = await BalanceSheet.new({ from: owner })
             this.allowanceSheet = await AllowanceSheet.new({ from: owner })
@@ -25,6 +29,7 @@ contract('--Proxy With Controller--', function (accounts) {
             await this.registry.setAttribute(oneHundred, "hasPassedKYC/AML", 1, "notes", { from: owner })
             await this.registry.setAttribute(oneHundred, "canBurn", 1, "notes", { from: owner })
             await this.token.initialize({from: owner})
+            await this.token.setGlobalPause(this.globalPause.address, { from: owner }) 
             await this.token.setBalanceSheet(this.balanceSheet.address, { from: owner })
             await this.token.setAllowanceSheet(this.allowanceSheet.address, { from: owner })   
             this.controllerImplementation = await TokenController.new({ from: owner })
@@ -68,14 +73,14 @@ contract('--Proxy With Controller--', function (accounts) {
         it('token can transfer ownership to controller', async function(){
             await this.token.transferOwnership(this.controller.address, { from: owner })
             await this.controller.issueClaimOwnership(this.token.address, { from: owner })
-            const tokenOwner = await this.token.owner.call()
+            const tokenOwner = await this.token.owner()
             assert.equal(tokenOwner,this.controller.address)
         })
         it('controller can set tusd registry', async function(){
             await this.token.transferOwnership(this.controller.address, { from: owner })
             await this.controller.issueClaimOwnership(this.token.address, { from: owner })
             await this.controller.setTusdRegistry(this.registry.address, { from: owner })
-            const tokenRegistry = await this.token.registry.call()
+            const tokenRegistry = await this.token.registry()
             assert.equal(tokenRegistry, this.registry.address)
         })
 
@@ -94,14 +99,14 @@ contract('--Proxy With Controller--', function (accounts) {
             })
 
             it('request a mint', async function () {
-                const originalMintOperationCount = await this.controller.mintOperationCount.call()
+                const originalMintOperationCount = await this.controller.mintOperationCount()
                 assert.equal(originalMintOperationCount, 0)
                 await this.controller.requestMint(oneHundred, 10*10**18 , { from: owner })
-                const mintOperation = await this.controller.mintOperations.call(0)
+                const mintOperation = await this.controller.mintOperations(0)
                 assert.equal(mintOperation[0], oneHundred)
                 assert.equal(Number(mintOperation[1]), 10*10**18)
                 assert.equal(Number(mintOperation[3]), 0,"numberOfApprovals not 0")
-                const mintOperationCount = await this.controller.mintOperationCount.call()
+                const mintOperationCount = await this.controller.mintOperationCount()
                 assert.equal(mintOperationCount, 1)
 
             })
