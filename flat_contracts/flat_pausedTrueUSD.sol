@@ -435,8 +435,7 @@ contract ProxyStorage {
     string public symbol = "TUSD";
 
     uint[] public gasRefundPool;
-    uint256 private redemptionAddressCount_Deprecated;
-    uint256 public minimumGasPriceForFutureRefunds;
+    uint256 public redemptionAddressCount;
 }
 
 // File: contracts/HasOwner.sol
@@ -556,9 +555,6 @@ contract PausedToken is HasOwner {
     function decreaseApproval(address _spender, uint _subtractedValue) public returns (bool) {
         revert("Token Paused");
     }
-    function paused() public pure returns (bool) {
-        return true;
-    }
 }
 
 /** @title PausedDelegateERC20
@@ -645,6 +641,11 @@ contract PausedTrueUSD is PausedDelegateERC20 {
     function setRegistry(Registry _registry) public onlyOwner {
         registry = _registry;
         emit SetRegistry(registry);
+    }
+
+    function incrementRedemptionAddressCount() external onlyOwner {
+        emit RedemptionAddress(address(redemptionAddressCount));
+        redemptionAddressCount += 1;
     }
 
     function sponsorGas() external {
