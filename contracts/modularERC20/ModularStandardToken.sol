@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.5.13;
 
 import "./ModularBasicToken.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
@@ -14,9 +14,6 @@ contract ModularStandardToken is ModularBasicToken {
     using SafeMath for uint256;
     
     event Approval(address indexed owner, address indexed spender, uint256 value);
-
-    uint256 constant INFINITE_ALLOWANCE = 0xfe00000000000000000000000000000000000000000000000000000000000000;
-
     
     /**
      * @dev Approve the passed address to spend the specified amount of tokens on behalf of msg.sender.
@@ -99,9 +96,7 @@ contract ModularStandardToken is ModularBasicToken {
 
     function _subAllowance(address _who, address _spender, uint256 _value) internal returns (uint256 newAllowance){
         newAllowance = _allowance[_who][_spender].sub(_value);
-        if (newAllowance < INFINITE_ALLOWANCE) {
-            _allowance[_who][_spender] = newAllowance;
-        }
+        _allowance[_who][_spender] = newAllowance;
     }
 
     function _setAllowance(address _who, address _spender, uint256 _value) internal {
