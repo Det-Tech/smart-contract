@@ -43,12 +43,12 @@ contract DelegateERC20 is CompliantDepositTokenWithHook {
     }
 
     function delegateIncreaseApproval(address spender, uint addedValue, address origSender) public onlyDelegateFrom returns (bool) {
-        _increaseAllowanceAllArgs(spender, addedValue, origSender);
+        _increaseApprovalAllArgs(spender, addedValue, origSender);
         return true;
     }
 
     function delegateDecreaseApproval(address spender, uint subtractedValue, address origSender) public onlyDelegateFrom returns (bool) {
-        _decreaseAllowanceAllArgs(spender, subtractedValue, origSender);
+        _decreaseApprovalAllArgs(spender, subtractedValue, origSender);
         return true;
     }
 }
