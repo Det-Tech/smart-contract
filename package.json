@@ -20,7 +20,7 @@
     "build:vy": "bash ./compileUniswap.sh",
     "build": "yarn clean && yarn build:sol && yarn build:vy && bash ./indexBuild.sh",
     "test:js": "./test.sh",
-    "test:ts": "mocha -r ts-node/register 'test-ts/**/*.test.{ts,js}'",
+    "test:ts": "mocha -r ts-node/register --timeout 10000 'test-ts/**/*.test.{ts,js}'",
     "test": "yarn test:ts && yarn test:js",
     "checks": "yarn lint && yarn typecheck && yarn test"
   },
@@ -54,7 +54,6 @@
     "ganache-time-traveler": "^1.0.14",
     "openzeppelin-solidity": "^2.4.0",
     "truffle": "5.1.11",
-    "truffle-flattener": "^1.4.3",
     "truffle-hdwallet-provider": "0.0.3",
     "web3": "1.2.4",
     "wjm-airswap-swap": "^5.0.1"
