@@ -1,4 +1,5 @@
-import { Wallet, Contract, utils } from 'ethers'
+import { Wallet, Contract } from 'ethers'
+import { parseEther, BigNumber, BigNumberish } from 'ethers/utils'
 import { MockProvider, deployContract, solidity } from 'ethereum-waffle'
 import { use, expect } from 'chai'
 import { beforeEachWithFixture } from './utils'
@@ -13,7 +14,7 @@ import {
 
 use(solidity)
 
-const { parseEther } = utils
+const from18Decimals = (x: BigNumber) => Number(x) / 10 ** 18
 
 describe('AssuredFinancialOpportunity', () => {
   let provider: MockProvider
@@ -30,13 +31,13 @@ describe('AssuredFinancialOpportunity', () => {
 
   const mockPoolAddress = Wallet.createRandom().address
 
-  async function deposit (from: Wallet, value: utils.BigNumberish) {
+  async function deposit (from: Wallet, value: BigNumberish) {
     await token.connect(from).approve(assuredFinancialOpportunity.address, value)
     await assuredFinancialOpportunity.deposit(from.address, value)
   }
 
   beforeEachWithFixture(async (p: MockProvider) => {
-    (provider = p)
+    provider = p
 
     ; [wallet, holder, beneficiary] = provider.getWallets()
 
@@ -75,7 +76,7 @@ describe('AssuredFinancialOpportunity', () => {
       await financialOpportunity.increasePerTokenValue(parseEther('0.5'))
       const perTokenValue = await assuredFinancialOpportunity.perTokenValue()
 
-      expect(perTokenValue).to.equal('1328201239943334173') // 1.5^0.7
+      expect(from18Decimals(perTokenValue)).to.equal(Math.pow(1.5, 0.7))
     })
 
     it('adjusted when reward basis changes', async () => {
@@ -239,8 +240,9 @@ describe('AssuredFinancialOpportunity', () => {
       await deposit(holder, parseEther('10'))
       await assuredFinancialOpportunity.setRewardBasis(0.7 * 1000)
       await financialOpportunity.increasePerTokenValue(parseEther('0.5'))
-      // 10 * (1.5 - 1.5 ^ 0.7) = 1717987600566658261 - 9 wei error
-      expect(await assuredFinancialOpportunity.awardAmount()).to.equal('1717987600566658270')
+
+      expect(from18Decimals(await assuredFinancialOpportunity.awardAmount()))
+        .to.be.closeTo(10 * (1.5 - 1.5 ** 0.7), 10 ** (-10))
     })
   })
 
@@ -251,8 +253,8 @@ describe('AssuredFinancialOpportunity', () => {
 
       await assuredFinancialOpportunity.awardPool()
 
-      expect(await token.balanceOf(mockPoolAddress)).to.equal(0)
-      expect(await financialOpportunity.getBalance()).to.equal(parseEther('10'))
+      expect(from18Decimals(await token.balanceOf(mockPoolAddress))).to.equal(0)
+      expect(from18Decimals(await financialOpportunity.getBalance())).to.be.closeTo(10, 10 ** (-10))
     })
 
     it('awards proper amount', async () => {
@@ -260,11 +262,10 @@ describe('AssuredFinancialOpportunity', () => {
       await assuredFinancialOpportunity.setRewardBasis(0.7 * 1000)
       await financialOpportunity.increasePerTokenValue(parseEther('0.5'))
 
-      const expectedAward = '1145325067044438846' // 10 * (1.5 - 1.5 ^ 0.7) / 1.5
-      await expect(assuredFinancialOpportunity.awardPool()).to.emit(assuredFinancialOpportunity, 'awardPoolSuccess').withArgs(expectedAward)
+      await assuredFinancialOpportunity.awardPool()
 
-      expect(await token.balanceOf(mockPoolAddress)).to.equal('1717987600566658270') // 10 * (1.5 - 1.5 ^ 0.7)
-      expect(await financialOpportunity.getBalance()).to.equal(parseEther('10').sub('1145325067044438846'))
+      expect(from18Decimals(await token.balanceOf(mockPoolAddress))).to.be.closeTo(10 * (1.5 - 1.5 ** 0.7), 10 ** (-10))
+      expect(from18Decimals(await financialOpportunity.getBalance())).to.be.closeTo(8.8546749330, 10 ** (-10))
     })
 
     it('awards 0 on subsequent calls', async () => {
@@ -273,12 +274,10 @@ describe('AssuredFinancialOpportunity', () => {
       await financialOpportunity.increasePerTokenValue(parseEther('0.5'))
 
       await assuredFinancialOpportunity.awardPool()
-
-      // 1 wei left due to rounding errors
-      expect(await assuredFinancialOpportunity.awardAmount()).to.equal(1)
+      expect(from18Decimals(await assuredFinancialOpportunity.awardAmount())).to.closeTo(0, 10 ** (-10))
       await assuredFinancialOpportunity.awardPool()
-      expect(await token.balanceOf(mockPoolAddress)).to.equal('1717987600566658271')
-      expect(await financialOpportunity.getBalance()).to.equal(parseEther('10').sub('1145325067044438846'))
+      expect(from18Decimals(await token.balanceOf(mockPoolAddress))).to.be.closeTo(10 * (1.5 - 1.5 ** 0.7), 10 ** (-10))
+      expect(from18Decimals(await financialOpportunity.getBalance())).to.be.closeTo(8.8546749330, 10 ** (-10))
     })
 
     it('awards proper amount when per token value increases between calls', async () => {
@@ -286,16 +285,12 @@ describe('AssuredFinancialOpportunity', () => {
       await assuredFinancialOpportunity.setRewardBasis(0.7 * 1000)
       await financialOpportunity.increasePerTokenValue(parseEther('0.5'))
 
-      const firstTUsdAmount = '1145325067044438846' // 10 * (1.5 - 1.5 ^ 0.7) / 1.5
-      const secondTUsdAmount = '1258097003631822410' // 10 * (2.5 - 2.5 ^ 0.7) / 2.5 - firstTUsdAmount
-
-      await expect(assuredFinancialOpportunity.awardPool()).to.emit(assuredFinancialOpportunity, 'awardPoolSuccess').withArgs(firstTUsdAmount)
+      await assuredFinancialOpportunity.awardPool()
       await financialOpportunity.increasePerTokenValue(parseEther('1'))
-      await expect(assuredFinancialOpportunity.awardPool()).to.emit(assuredFinancialOpportunity, 'awardPoolSuccess').withArgs(secondTUsdAmount)
+      await assuredFinancialOpportunity.awardPool()
 
-      // 1 wei error
-      expect(await token.balanceOf(mockPoolAddress)).to.equal('4863230109646214295') // firstTUsdAmount * 1.5 + secondTUsdAmount * 2.5
-      expect(await financialOpportunity.getBalance()).to.equal('7596577929323738744') // 10 - firstTUsdAmount - secondTUsdAmount
+      expect(from18Decimals(await token.balanceOf(mockPoolAddress))).to.be.closeTo(4.8632301096462145, 10 ** (-10))
+      expect(from18Decimals(await financialOpportunity.getBalance())).to.be.closeTo(7.596577929323739, 10 ** (-10))
     })
 
     it('not additional awards when reward basis changes between calls', async () => {
@@ -306,13 +301,11 @@ describe('AssuredFinancialOpportunity', () => {
       await assuredFinancialOpportunity.awardPool()
       await assuredFinancialOpportunity.setRewardBasis(0.5 * 1000)
 
-      // 1 wei error
-      expect(await assuredFinancialOpportunity.awardAmount()).to.equal(1)
+      expect(from18Decimals(await assuredFinancialOpportunity.awardAmount())).to.closeTo(0, 10 ** (-10))
       await assuredFinancialOpportunity.awardPool()
 
-      // 1 wei error
-      expect(await token.balanceOf(mockPoolAddress)).to.equal('1717987600566658271')
-      expect(await financialOpportunity.getBalance()).to.equal(parseEther('10').sub('1145325067044438846'))
+      expect(from18Decimals(await token.balanceOf(mockPoolAddress))).to.be.closeTo(10 * (1.5 - 1.5 ** 0.7), 10 ** (-10))
+      expect(from18Decimals(await financialOpportunity.getBalance())).to.be.closeTo(8.8546749330, 10 ** (-10))
     })
 
     it('does NOT revert if the withdrawal fails', async () => {
@@ -322,8 +315,8 @@ describe('AssuredFinancialOpportunity', () => {
 
       await assuredFinancialOpportunity.awardPool()
 
-      expect(await token.balanceOf(mockPoolAddress)).to.equal(0)
-      expect(await financialOpportunity.getBalance()).to.equal(parseEther('10'))
+      expect(from18Decimals(await token.balanceOf(mockPoolAddress))).to.equal(0)
+      expect(from18Decimals(await financialOpportunity.getBalance())).to.equal(10)
     })
 
     it('anyone can call', async () => {
@@ -333,8 +326,8 @@ describe('AssuredFinancialOpportunity', () => {
 
       await assuredFinancialOpportunity.connect(holder).awardPool()
 
-      expect(await token.balanceOf(mockPoolAddress)).to.equal('1717987600566658270')
-      expect(await financialOpportunity.getBalance()).to.equal(parseEther('10').sub('1145325067044438846'))
+      expect(from18Decimals(await token.balanceOf(mockPoolAddress))).to.be.closeTo(10 * (1.5 - 1.5 ** 0.7), 10 ** (-10))
+      expect(from18Decimals(await financialOpportunity.getBalance())).to.be.closeTo(8.8546749330, 10 ** (-10))
     })
   })
 })
