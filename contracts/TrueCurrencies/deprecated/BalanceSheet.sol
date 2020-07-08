@@ -1,13 +1,14 @@
-pragma solidity 0.5.13;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.6.10;
 
 import "./Claimable.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 // A wrapper around the balanceOf mapping.
 contract BalanceSheet is Claimable {
     using SafeMath for uint256;
 
-    mapping (address => uint256) public balanceOf;
+    mapping(address => uint256) public balanceOf;
 
     function addBalance(address _addr, uint256 _value) public onlyOwner {
         balanceOf[_addr] = balanceOf[_addr].add(_value);

@@ -1,10 +1,9 @@
-pragma solidity 0.5.13;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.6.10;
 
-import "../Admin/TokenController.sol";
-
+import "../admin/TokenController.sol";
 
 contract TokenControllerMock is TokenController {
-
     function initialize() external {
         require(!initialized, "already initialized");
         owner = msg.sender;
@@ -22,9 +21,7 @@ contract TokenControllerPauseMock is TokenControllerMock {
     /**
      *@dev pause all pausable actions on TrueUSD, mints/burn/transfer/approve
      */
-    function pauseToken() external onlyFastPauseOrOwner {
-        OwnedUpgradeabilityProxy(uint160(address(token))).upgradeTo(
-            pausedImplementation
-        );
+    function pauseToken() external override onlyFastPauseOrOwner {
+        OwnedUpgradeabilityProxy(uint160(address(token))).upgradeTo(pausedImplementation);
     }
 }

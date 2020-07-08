@@ -1,13 +1,13 @@
-pragma solidity 0.5.13;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.6.10;
 
-import "../TrueCurrencies/TrueUSD.sol";
+import "../trueCurrencies/TrueUSD.sol";
 import "./IAToken.sol";
 import "./ILendingPool.sol";
-import "../TrueCurrencies/Proxy/OwnedUpgradeabilityProxy.sol";
-import "./FinancialOpportunity.sol";
+import "../trueCurrencies/proxy/OwnedUpgradeabilityProxy.sol";
 import "./ILendingPoolCore.sol";
-import "../TrueCurrencies/modularERC20/InstantiatableOwnable.sol";
-import { SafeMath } from "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "../trueCurrencies/modularERC20/InstantiatableOwnable.sol";
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 /**
  * @title AaveFinancialOpportunity
@@ -39,7 +39,7 @@ contract AaveFinancialOpportunity is FinancialOpportunity, InstantiatableOwnable
     /** TrueUSD */
     TrueUSD public token;
 
-    /** total number of yTokens issed **/
+    /** @dev total number of yTokens issed **/
     uint256 _totalSupply;
 
     modifier onlyProxyOwner() {
@@ -52,10 +52,10 @@ contract AaveFinancialOpportunity is FinancialOpportunity, InstantiatableOwnable
      * Called by TrueUSD
      */
     function configure(
-        IAToken _aToken,            // aToken
-        ILendingPool _lendingPool,  // lendingPool interface
-        TrueUSD _token,             // TrueUSD
-        address _owner              // owner
+        IAToken _aToken, // aToken
+        ILendingPool _lendingPool, // lendingPool interface
+        TrueUSD _token, // TrueUSD
+        address _owner // owner
     ) public onlyProxyOwner {
         require(address(_aToken) != address(0), "aToken cannot be address(0)");
         require(address(_lendingPool) != address(0), "lendingPool cannot be address(0)");
@@ -70,7 +70,7 @@ contract AaveFinancialOpportunity is FinancialOpportunity, InstantiatableOwnable
     /**
      * @dev get proxy owner
      */
-    function proxyOwner() public view returns(address) {
+    function proxyOwner() public view returns (address) {
         return OwnedUpgradeabilityProxy(address(this)).proxyOwner();
     }
 
@@ -78,16 +78,16 @@ contract AaveFinancialOpportunity is FinancialOpportunity, InstantiatableOwnable
      * Exchange rate between TUSD and yTUSD
      * @return TUSD / yTUSD price ratio (18 decimals of percision)
      */
-    function tokenValue() public view returns(uint256) {
+    function tokenValue() public override view returns (uint256) {
         ILendingPoolCore core = ILendingPoolCore(lendingPool.core());
-        return core.getReserveNormalizedIncome(address(token)).div(10**(27-18));
+        return core.getReserveNormalizedIncome(address(token)).div(10**(27 - 18));
     }
 
     /**
      * @dev get yTUSD issued by this opportunity
      * @return total yTUSD supply
-    **/
-    function totalSupply() public view returns(uint256) {
+     **/
+    function totalSupply() public override view returns (uint256) {
         return _totalSupply;
     }
 
@@ -95,7 +95,7 @@ contract AaveFinancialOpportunity is FinancialOpportunity, InstantiatableOwnable
      * @dev get aToken balance of this contract
      * @return aToken balance of this contract
      */
-    function aTokenBalance() public view returns(uint256) {
+    function aTokenBalance() public view returns (uint256) {
         return aToken.balanceOf(address(this));
     }
 
@@ -103,24 +103,24 @@ contract AaveFinancialOpportunity is FinancialOpportunity, InstantiatableOwnable
      * @dev get TUSD balance of this contract
      * @return TUSD balance of this contract
      */
-    function tusdBalance() public view returns(uint256) {
+    function tusdBalance() public view returns (uint256) {
         return token.balanceOf(address(this));
     }
 
     /**
      * @dev Return value of stake in yTUSD
      */
-    function getValueInStake(uint256 _amount) public view returns(uint256) {
+    function getValueInStake(uint256 _amount) public view returns (uint256) {
         return _amount.mul(10**18).div(tokenValue());
     }
 
     /**
-    * @dev deposits TrueUSD into AAVE using transferFrom
-    * @param from account to transferFrom TUSD
-    * @param amount amount in TUSD to deposit to AAVE
-    * @return yTUSD minted from this deposit
-    */
-    function deposit(address from, uint256 amount) external onlyOwner returns(uint256) {
+     * @dev deposits TrueUSD into AAVE using transferFrom
+     * @param from account to transferFrom TUSD
+     * @param amount amount in TUSD to deposit to AAVE
+     * @return yTUSD minted from this deposit
+     */
+    function deposit(address from, uint256 amount) external override onlyOwner returns (uint256) {
         require(token.transferFrom(from, address(this), amount), "transfer from failed");
         require(token.approve(address(lendingPool.core()), amount), "approve failed");
 
@@ -144,9 +144,9 @@ contract AaveFinancialOpportunity is FinancialOpportunity, InstantiatableOwnable
      * @param _to address to transfer TUSD to
      * @param _amount amount in yTUSD to redeem
      */
-    function _redeem(address _to, uint256 _amount) internal returns(uint256) {
+    function _redeem(address _to, uint256 _amount) internal returns (uint256) {
         // calculate amount in TUSD
-        uint tusdAmount = _amount.mul(tokenValue()).div(10**18);
+        uint256 tusdAmount = _amount.mul(tokenValue()).div(10**18);
         if (aToken.balanceOf(address(this)) < tusdAmount) {
             tusdAmount = aToken.balanceOf(address(this));
         }
@@ -177,7 +177,7 @@ contract AaveFinancialOpportunity is FinancialOpportunity, InstantiatableOwnable
      * @param amount amount of yTUSD to redeem
      * @return TUSD amount returned from redeem
      */
-    function redeem(address to, uint256 amount) external onlyOwner returns(uint256) {
+    function redeem(address to, uint256 amount) external override onlyOwner returns (uint256) {
         return _redeem(to, amount);
     }
 
@@ -186,10 +186,10 @@ contract AaveFinancialOpportunity is FinancialOpportunity, InstantiatableOwnable
      * @param to account withdarw TUSD to
      * @return TUSD amount returned from redeem
      */
-    function redeemAll(address to) external onlyOwner returns(uint256) {
+    function redeemAll(address to) external onlyOwner returns (uint256) {
         return _redeem(to, totalSupply());
     }
 
-    function() external payable {
-    }
+    // solhint-disable-next-line no-empty-blocks
+    receive() external payable {}
 }

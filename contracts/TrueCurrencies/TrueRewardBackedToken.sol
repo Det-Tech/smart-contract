@@ -1,7 +1,8 @@
-pragma solidity 0.5.13;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.6.10;
 
-import { TrueCoinReceiver } from "./TrueCoinReceiver.sol";
-import { RewardTokenWithReserve } from "./RewardTokenWithReserve.sol";
+import {TrueCoinReceiver} from "./TrueCoinReceiver.sol";
+import {RewardTokenWithReserve} from "./RewardTokenWithReserve.sol";
 
 /**
  * @title TrueRewardBackedToken
@@ -37,8 +38,7 @@ import { RewardTokenWithReserve } from "./RewardTokenWithReserve.sol";
  * so some of the code is built to support this
  *
  */
-contract TrueRewardBackedToken is RewardTokenWithReserve {
-
+abstract contract TrueRewardBackedToken is RewardTokenWithReserve {
     /* variables in Proxy Storage:
     mapping(address => FinancialOpportunity) finOps;
     mapping(address => mapping(address => uint256)) finOpBalances;
@@ -66,7 +66,7 @@ contract TrueRewardBackedToken is RewardTokenWithReserve {
      * Equal to deposit backed TrueCurrency plus debt backed TrueCurrency
      * @return total supply in trueCurrency
      */
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() public virtual override view returns (uint256) {
         // if supply in opportunity finOp, return supply of deposits + debt
         // otherwise call super to return normal totalSupply
         if (opportunityRewardSupply() != 0) {
@@ -97,7 +97,7 @@ contract TrueRewardBackedToken is RewardTokenWithReserve {
      * @param _who address of account to get balanceOf for
      * @return balance total balance of address including rewards
      */
-    function balanceOf(address _who) public view returns (uint256) {
+    function balanceOf(address _who) public virtual override view returns (uint256) {
         // if trueReward enabled, return token value of reward balance
         // otherwise call token balanceOf
         if (trueRewardEnabled(_who)) {
@@ -116,7 +116,7 @@ contract TrueRewardBackedToken is RewardTokenWithReserve {
         require(!trueRewardEnabled(msg.sender), "TrueReward already enabled");
 
         // get sender balance
-        uint balance = _getBalance(msg.sender);
+        uint256 balance = _getBalance(msg.sender);
 
         if (balance != 0) {
             // deposit entire user token balance
@@ -138,7 +138,7 @@ contract TrueRewardBackedToken is RewardTokenWithReserve {
         // require TrueReward is enabled
         require(trueRewardEnabled(msg.sender), "TrueReward already disabled");
         // get balance
-        uint rewardBalance = rewardTokenBalance(msg.sender, opportunity());
+        uint256 rewardBalance = rewardTokenBalance(msg.sender, opportunity());
 
         // remove reward distribution
         _removeDistribution(opportunity());
@@ -157,7 +157,7 @@ contract TrueRewardBackedToken is RewardTokenWithReserve {
      * Mints TrueCurrency backed by debt
      * When we add multiple opportunities, this needs to work for mutliple interfaces
      */
-    function mint(address _to, uint256 _value) public onlyOwner {
+    function mint(address _to, uint256 _value) public virtual override onlyOwner {
         // check if to address is enabled
         bool toEnabled = trueRewardEnabled(_to);
 
@@ -167,9 +167,8 @@ contract TrueRewardBackedToken is RewardTokenWithReserve {
             super.mint(address(this), _value);
             // transfer minted amount to target receiver
             _transferAllArgs(address(this), _to, _value);
-        }
-        // otherwise call normal mint process
-        else {
+        } else {
+            // otherwise call normal mint process
             super.mint(_to, _value);
         }
     }
@@ -236,7 +235,11 @@ contract TrueRewardBackedToken is RewardTokenWithReserve {
      * 2. Call transferFrom, using deposit balance for transfer
      * 3. If reciever enabled, deposit true currency into
      */
-    function _transferAllArgs(address _from, address _to, uint256 _value) internal returns (address) {
+    function _transferAllArgs(
+        address _from,
+        address _to,
+        uint256 _value
+    ) internal virtual override returns (address) {
         // get enabled flags and opportunity address
         bool fromEnabled = trueRewardEnabled(_from);
         bool toEnabled = trueRewardEnabled(_to);
@@ -282,7 +285,7 @@ contract TrueRewardBackedToken is RewardTokenWithReserve {
         address _to,
         uint256 _value,
         address _spender
-    ) internal returns (address) {
+    ) internal virtual override returns (address) {
         // get enabled flags and opportunity address
         bool fromEnabled = trueRewardEnabled(_from);
         bool toEnabled = trueRewardEnabled(_to);
@@ -323,16 +326,14 @@ contract TrueRewardBackedToken is RewardTokenWithReserve {
     function _setDistribution(uint256 proportion, address finOp) internal {
         require(proportion <= maxRewardProportion, "exceeds maximum proportion");
         require(_rewardDistribution[msg.sender].length == 0, "already enabled");
-        _rewardDistribution[msg.sender].push(
-            RewardAllocation(proportion, finOp));
+        _rewardDistribution[msg.sender].push(RewardAllocation(proportion, finOp));
     }
 
     /**
      * @dev Remove reward distribution for a financial opportunity
      * Remove
      */
-    function _removeDistribution(address finOp) internal {
-        delete _rewardDistribution[msg.sender][0];
-        _rewardDistribution[msg.sender].length--;
+    function _removeDistribution(address) internal {
+        _rewardDistribution[msg.sender].pop();
     }
 }

@@ -1,9 +1,7 @@
-pragma solidity 0.5.13;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.6.10;
 
-interface Registry {
-    function setAttributeValue(address who, bytes32 what, uint val) external;
-    function hasAttribute(address _who, bytes32 _attribute) external view returns(bool);
-}
+import "../../registry/Registry.sol";
 
 contract DepositAddressRegistrar {
     Registry public registry;
@@ -16,15 +14,14 @@ contract DepositAddressRegistrar {
     }
 
     function registerDepositAddress() public {
-        address shiftedAddress = address(uint(msg.sender) >> 20);
+        address shiftedAddress = address(uint256(msg.sender) >> 20);
         require(!registry.hasAttribute(shiftedAddress, IS_DEPOSIT_ADDRESS), "deposit address already registered");
-        registry.setAttributeValue(shiftedAddress, IS_DEPOSIT_ADDRESS, uint(msg.sender));
+        registry.setAttributeValue(shiftedAddress, IS_DEPOSIT_ADDRESS, uint256(msg.sender));
         emit DepositAddressRegistered(msg.sender);
     }
 
-    function() external payable {
+    receive() external payable {
         registerDepositAddress();
         msg.sender.transfer(msg.value);
     }
 }
-

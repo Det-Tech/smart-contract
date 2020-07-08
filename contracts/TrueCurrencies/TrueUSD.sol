@@ -1,8 +1,8 @@
-pragma solidity 0.5.13;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.6.10;
 
 import "./TrueRewardBackedToken.sol";
 import "./DelegateERC20.sol";
-
 
 /** @title TrueUSD
  * @dev This is the top-level ERC20 contract, but most of the interesting functionality is
@@ -28,7 +28,36 @@ contract TrueUSD is TrueRewardBackedToken, DelegateERC20 {
         return "TUSD";
     }
 
-    function canBurn() internal pure returns (bytes32) {
+    function canBurn() internal override pure returns (bytes32) {
         return "canBurn";
+    }
+
+    function _transferAllArgs(
+        address _from,
+        address _to,
+        uint256 _value
+    ) internal override(TrueRewardBackedToken, CompliantDepositTokenWithHook) returns (address) {
+        return TrueRewardBackedToken._transferAllArgs(_from, _to, _value);
+    }
+
+    function _transferFromAllArgs(
+        address _from,
+        address _to,
+        uint256 _value,
+        address _spender
+    ) internal override(TrueRewardBackedToken, CompliantDepositTokenWithHook) returns (address) {
+        return TrueRewardBackedToken._transferFromAllArgs(_from, _to, _value, _spender);
+    }
+
+    function balanceOf(address _who) public override(TrueRewardBackedToken, ModularBasicToken) view returns (uint256) {
+        return TrueRewardBackedToken.balanceOf(_who);
+    }
+
+    function mint(address _to, uint256 _value) public override(TrueRewardBackedToken, CompliantDepositTokenWithHook) onlyOwner {
+        return TrueRewardBackedToken.mint(_to, _value);
+    }
+
+    function totalSupply() public override(TrueRewardBackedToken, ModularBasicToken) view returns (uint256) {
+        return TrueRewardBackedToken.totalSupply();
     }
 }

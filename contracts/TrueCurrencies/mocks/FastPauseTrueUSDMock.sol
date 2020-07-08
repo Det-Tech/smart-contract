@@ -1,4 +1,5 @@
-pragma solidity 0.5.13;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.6.10;
 
 import "./TokenControllerMock.sol";
 
@@ -15,9 +16,7 @@ contract FastPauseTrueUSDMock {
     event FastTrueUSDPause(address indexed sender);
 
     constructor(address _trueUsdPauser, address _controllerContract) public {
-        require(
-            _trueUsdPauser != address(0) && _controllerContract != address(0)
-        );
+        require(_trueUsdPauser != address(0) && _controllerContract != address(0));
         controllerContract = TokenController(_controllerContract);
         trueUsdPauser = _trueUsdPauser;
     }
@@ -28,7 +27,7 @@ contract FastPauseTrueUSDMock {
     }
 
     //fallback function used to pause trueUSD when it receives eth
-    function() external payable onlyPauseKey {
+    receive() external payable onlyPauseKey {
         emit FastTrueUSDPause(msg.sender);
         msg.sender.transfer(msg.value);
         controllerContract.pauseToken();

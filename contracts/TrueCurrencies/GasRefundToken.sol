@@ -1,4 +1,5 @@
-pragma solidity 0.5.13;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.6.10;
 
 import "./ProxyStorage.sol";
 
@@ -9,7 +10,6 @@ Each time an non-empty storage slot is set to 0, evm refund 15,000 to the sender
 of the transaction.
 */
 contract GasRefundToken is ProxyStorage {
-
     /**
       A buffer of "Sheep" runs from 0xffff...fffe down
       They suicide when you call them, if you are their parent
@@ -37,8 +37,8 @@ contract GasRefundToken is ProxyStorage {
           1a SELFDESTRUCT   ff
         */
         assembly {
-            mstore(0, or(0x601b8060093d393df33d33730000000000000000000000000000000000000000, address))
-            mstore(32,   0x185857ff00000000000000000000000000000000000000000000000000000000)
+            mstore(0, or(0x601b8060093d393df33d33730000000000000000000000000000000000000000, address()))
+            mstore(32, 0x185857ff00000000000000000000000000000000000000000000000000000000)
             let offset := sload(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
             let location := sub(0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe, offset)
             sstore(location, create(0, 0, 0x24))
@@ -58,11 +58,11 @@ contract GasRefundToken is ProxyStorage {
         assembly {
             let offset := sload(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
             if gt(offset, 0) {
-              let location := sub(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff,offset)
-              sstore(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, sub(offset, 1))
-              let sheep := sload(location)
-              pop(call(gas, sheep, 0, 0, 0, 0, 0))
-              sstore(location, 0)
+                let location := sub(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, offset)
+                sstore(0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff, sub(offset, 1))
+                let sheep := sload(location)
+                pop(call(gas(), sheep, 0, 0, 0, 0, 0))
+                sstore(location, 0)
             }
         }
     }
@@ -112,7 +112,7 @@ contract GasRefundToken is ProxyStorage {
             let offset := sload(0xfffff)
             if gt(offset, 1) {
                 let location := add(offset, 0xfffff)
-                if gt(gasprice,sload(location)) {
+                if gt(gasprice(), sload(location)) {
                     sstore(location, 0)
                     location := sub(location, 1)
                     sstore(location, 0)
@@ -131,7 +131,7 @@ contract GasRefundToken is ProxyStorage {
             let offset := sload(0xfffff)
             if gt(offset, 1) {
                 let location := add(offset, 0xfffff)
-                if gt(gasprice,sload(location)) {
+                if gt(gasprice(), sload(location)) {
                     sstore(location, 0)
                     sstore(0xfffff, sub(offset, 1))
                 }
@@ -140,9 +140,9 @@ contract GasRefundToken is ProxyStorage {
     }
 
     /**
-    *@dev Return the remaining sponsored gas slots
-    */
-    function remainingGasRefundPool() public view returns (uint length) {
+     *@dev Return the remaining sponsored gas slots
+     */
+    function remainingGasRefundPool() public view returns (uint256 length) {
         assembly {
             length := sload(0xfffff)
         }
